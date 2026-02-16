@@ -34,7 +34,7 @@ const AdminDashboard: React.FC = () => {
     if (filterDealer !== "all" && s.dealer_code !== filterDealer) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      return s.customer_name.toLowerCase().includes(q) || s.customer_code.includes(q) || s.dealer_code.includes(searchQuery);
+      return s.customer_name.toLowerCase().includes(q) || s.customer_code.includes(q) || s.dealer_code.includes(searchQuery) || (s.customer_mobile || "").includes(searchQuery);
     }
     return true;
   });
@@ -121,7 +121,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex flex-wrap gap-3 items-end">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Search</Label>
-                <Input placeholder="Customer / Code" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-48" />
+                <Input placeholder="Customer / Code / Mobile" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-56" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Plan</Label>
@@ -166,6 +166,7 @@ const AdminDashboard: React.FC = () => {
                     <TableRow>
                       <TableHead>Order ID</TableHead>
                       <TableHead>Customer</TableHead>
+                      <TableHead>Mobile</TableHead>
                       <TableHead>Dealer</TableHead>
                       <TableHead>Plan</TableHead>
                       <TableHead>Amount</TableHead>
@@ -181,6 +182,7 @@ const AdminDashboard: React.FC = () => {
                           <div className="font-medium">{sub.customer_name}</div>
                           <div className="text-xs text-muted-foreground">{sub.customer_code}</div>
                         </TableCell>
+                        <TableCell className="text-sm">{sub.customer_mobile || "—"}</TableCell>
                         <TableCell className="text-sm">{sub.dealer_code}</TableCell>
                         <TableCell><Badge variant="outline">{sub.plan_name.replace(" Assistance Plan", "")}</Badge></TableCell>
                         <TableCell>₹{sub.plan_price}</TableCell>
@@ -189,7 +191,7 @@ const AdminDashboard: React.FC = () => {
                       </TableRow>
                     ))}
                     {filteredSubs.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No results.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No results.</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>

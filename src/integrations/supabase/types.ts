@@ -14,7 +14,230 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          city: string
+          created_at: string
+          customer_code: string
+          customer_name: string
+          dealer_code: string
+          email: string | null
+          id: string
+          invoice_number: string | null
+          mobile_number: string
+          registration_date: string
+          tyre_details: string | null
+          updated_at: string
+          vehicle_make_model: string | null
+          vehicle_number: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          customer_code: string
+          customer_name: string
+          dealer_code: string
+          email?: string | null
+          id?: string
+          invoice_number?: string | null
+          mobile_number: string
+          registration_date?: string
+          tyre_details?: string | null
+          updated_at?: string
+          vehicle_make_model?: string | null
+          vehicle_number: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          customer_code?: string
+          customer_name?: string
+          dealer_code?: string
+          email?: string | null
+          id?: string
+          invoice_number?: string | null
+          mobile_number?: string
+          registration_date?: string
+          tyre_details?: string | null
+          updated_at?: string
+          vehicle_make_model?: string | null
+          vehicle_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_dealer_code_fkey"
+            columns: ["dealer_code"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["dealer_code"]
+          },
+        ]
+      }
+      dealers: {
+        Row: {
+          created_at: string
+          dealer_address_line1: string | null
+          dealer_address_line2: string | null
+          dealer_channel_type: string | null
+          dealer_city: string | null
+          dealer_code: string
+          dealer_email: string | null
+          dealer_enrollment_date: string
+          dealer_gstin: string | null
+          dealer_mobile_number: string
+          dealer_name: string
+          dealer_pincode: string | null
+          dealer_state: string | null
+          dealer_status: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dealer_address_line1?: string | null
+          dealer_address_line2?: string | null
+          dealer_channel_type?: string | null
+          dealer_city?: string | null
+          dealer_code: string
+          dealer_email?: string | null
+          dealer_enrollment_date?: string
+          dealer_gstin?: string | null
+          dealer_mobile_number: string
+          dealer_name: string
+          dealer_pincode?: string | null
+          dealer_state?: string | null
+          dealer_status?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dealer_address_line1?: string | null
+          dealer_address_line2?: string | null
+          dealer_channel_type?: string | null
+          dealer_city?: string | null
+          dealer_code?: string
+          dealer_email?: string | null
+          dealer_enrollment_date?: string
+          dealer_gstin?: string | null
+          dealer_mobile_number?: string
+          dealer_name?: string
+          dealer_pincode?: string | null
+          dealer_state?: string | null
+          dealer_status?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          customer_code: string
+          dealer_code: string
+          id: string
+          referral_source: string
+          referral_timestamp: string
+        }
+        Insert: {
+          customer_code: string
+          dealer_code: string
+          id?: string
+          referral_source?: string
+          referral_timestamp?: string
+        }
+        Update: {
+          customer_code?: string
+          dealer_code?: string
+          id?: string
+          referral_source?: string
+          referral_timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_customer_code_fkey"
+            columns: ["customer_code"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["customer_code"]
+          },
+          {
+            foreignKeyName: "referrals_dealer_code_fkey"
+            columns: ["dealer_code"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["dealer_code"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          customer_code: string
+          customer_mobile: string | null
+          customer_name: string
+          dealer_code: string
+          id: string
+          order_id: string
+          order_timestamp: string
+          payment_status: string
+          payment_transaction_id: string | null
+          plan_id: string
+          plan_name: string
+          plan_price: number
+          subscription_end_date: string
+          subscription_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          customer_code: string
+          customer_mobile?: string | null
+          customer_name: string
+          dealer_code: string
+          id?: string
+          order_id: string
+          order_timestamp?: string
+          payment_status?: string
+          payment_transaction_id?: string | null
+          plan_id: string
+          plan_name: string
+          plan_price: number
+          subscription_end_date: string
+          subscription_start_date?: string
+        }
+        Update: {
+          created_at?: string
+          customer_code?: string
+          customer_mobile?: string | null
+          customer_name?: string
+          dealer_code?: string
+          id?: string
+          order_id?: string
+          order_timestamp?: string
+          payment_status?: string
+          payment_transaction_id?: string | null
+          plan_id?: string
+          plan_name?: string
+          plan_price?: number
+          subscription_end_date?: string
+          subscription_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_customer_code_fkey"
+            columns: ["customer_code"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["customer_code"]
+          },
+          {
+            foreignKeyName: "subscriptions_dealer_code_fkey"
+            columns: ["dealer_code"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["dealer_code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

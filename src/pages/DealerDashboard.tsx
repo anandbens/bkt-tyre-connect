@@ -28,7 +28,7 @@ const DealerDashboard: React.FC = () => {
 
   const filteredSubs = dealerSubs.filter((s) => {
     if (filterPlan !== "all" && s.plan_id !== filterPlan) return false;
-    if (searchCustomer && !s.customer_name.toLowerCase().includes(searchCustomer.toLowerCase()) && !s.customer_code.includes(searchCustomer)) return false;
+    if (searchCustomer && !s.customer_name.toLowerCase().includes(searchCustomer.toLowerCase()) && !s.customer_code.includes(searchCustomer) && !(s.customer_mobile || "").includes(searchCustomer)) return false;
     return true;
   });
 
@@ -108,7 +108,7 @@ const DealerDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <CardTitle className="text-base">Subscriptions</CardTitle>
               <div className="flex gap-2">
-                <Input placeholder="Search customer..." value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)} className="w-44" />
+                <Input placeholder="Search name / mobile..." value={searchCustomer} onChange={(e) => setSearchCustomer(e.target.value)} className="w-48" />
                 <Select value={filterPlan} onValueChange={setFilterPlan}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="All Plans" /></SelectTrigger>
                   <SelectContent>
@@ -126,6 +126,7 @@ const DealerDashboard: React.FC = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Mobile</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -139,6 +140,7 @@ const DealerDashboard: React.FC = () => {
                       <div className="font-medium">{sub.customer_name}</div>
                       <div className="text-xs text-muted-foreground">{sub.customer_code}</div>
                     </TableCell>
+                    <TableCell className="text-sm">{sub.customer_mobile || "—"}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{sub.plan_name.replace(" Assistance Plan", "")}</Badge>
                     </TableCell>
@@ -151,7 +153,7 @@ const DealerDashboard: React.FC = () => {
                 ))}
                 {filteredSubs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No subscriptions found.
                     </TableCell>
                   </TableRow>

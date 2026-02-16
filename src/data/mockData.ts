@@ -28,6 +28,7 @@ export interface Subscription {
   order_id: string;
   customer_code: string;
   customer_name: string;
+  customer_mobile?: string;
   dealer_code: string;
   plan_id: string;
   plan_name: string;
@@ -160,6 +161,7 @@ export const mockSubscriptions: Subscription[] = [
     order_id: "ORD45678",
     customer_code: "CUS78901",
     customer_name: "Ravi Kumar",
+    customer_mobile: "9876543210",
     dealer_code: "DLR12345",
     plan_id: "PLAN_GOLD",
     plan_name: "Gold Assistance Plan",
@@ -173,6 +175,7 @@ export const mockSubscriptions: Subscription[] = [
     order_id: "ORD45679",
     customer_code: "CUS78902",
     customer_name: "Suresh Patel",
+    customer_mobile: "9876543212",
     dealer_code: "DLR12345",
     plan_id: "PLAN_SILVER",
     plan_name: "Silver Assistance Plan",
