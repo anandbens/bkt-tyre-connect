@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight } from "lucide-react";
+import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import * as XLSX from "xlsx";
+
+const PAGE_SIZE = 10;
 
 const AdminDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -30,9 +33,16 @@ const AdminDashboard: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
 
+  const [subPage, setSubPage] = useState(1);
+  const [custPage, setCustPage] = useState(1);
+  const [dealerPage, setDealerPage] = useState(1);
+
   useEffect(() => {
     if (loggedIn) fetchData();
   }, [loggedIn]);
+
+  // Reset pages when filters change
+  useEffect(() => { setSubPage(1); setCustPage(1); setDealerPage(1); }, [filterPlan, filterDealer, searchQuery, dateFrom, dateTo]);
 
   const fetchData = async () => {
     const [custRes, subRes, dlrRes] = await Promise.all([
@@ -69,6 +79,96 @@ const AdminDashboard: React.FC = () => {
     }
     return true;
   });
+
+  // Pagination helpers
+  const paginate = <T,>(data: T[], page: number) => {
+    const start = (page - 1) * PAGE_SIZE;
+    return data.slice(start, start + PAGE_SIZE);
+  };
+  const totalPages = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const PaginationControls = ({ page, setPage, total }: { page: number; setPage: (p: number) => void; total: number }) => {
+    const tp = totalPages(total);
+    if (tp <= 1) return null;
+    return (
+      <div className="flex items-center justify-between pt-4 px-1">
+        <span className="text-xs text-muted-foreground">
+          Showing {Math.min((page - 1) * PAGE_SIZE + 1, total)}–{Math.min(page * PAGE_SIZE, total)} of {total}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <ChevronLeft size={16} />
+          </Button>
+          {Array.from({ length: tp }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === tp || Math.abs(p - page) <= 1)
+            .map((p, idx, arr) => (
+              <React.Fragment key={p}>
+                {idx > 0 && arr[idx - 1] !== p - 1 && <span className="text-xs text-muted-foreground px-1">…</span>}
+                <Button variant={p === page ? "default" : "outline"} size="icon" className="h-8 w-8 text-xs" onClick={() => setPage(p)}>
+                  {p}
+                </Button>
+              </React.Fragment>
+            ))}
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= tp} onClick={() => setPage(page + 1)}>
+            <ChevronRight size={16} />
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Excel export: join all data for filtered results
+  const exportToExcel = () => {
+    const dealerMap = Object.fromEntries(dealers.map((d) => [d.dealer_code, d]));
+    const customerMap = Object.fromEntries(customers.map((c) => [c.customer_code, c]));
+
+    const rows = filteredSubs.map((s) => {
+      const c = customerMap[s.customer_code] || {};
+      const d = dealerMap[s.dealer_code] || {};
+      return {
+        "Order ID": s.order_id,
+        "Customer Code": s.customer_code,
+        "Customer Name": s.customer_name,
+        "Customer Mobile": s.customer_mobile || "",
+        "Customer Email": c.email || "",
+        "Customer State": c.state || "",
+        "Customer City": c.city || "",
+        "Vehicle Number": c.vehicle_number || "",
+        "Vehicle Make/Model": c.vehicle_make_model || "",
+        "Tyre Details": c.tyre_details || "",
+        "Number of Tyres": c.number_of_tyres || "",
+        "Invoice Number": c.invoice_number || "",
+        "Registration Date": c.registration_date || "",
+        "Dealer Code": s.dealer_code,
+        "Dealer Name": d.dealer_name || "",
+        "Dealer Mobile": d.dealer_mobile_number || "",
+        "Dealer Email": d.dealer_email || "",
+        "Dealer City": d.dealer_city || "",
+        "Dealer State": d.dealer_state || "",
+        "Dealer GSTIN": d.dealer_gstin || "",
+        "Dealer Channel": d.dealer_channel_type || "",
+        "Plan ID": s.plan_id,
+        "Plan Name": s.plan_name,
+        "Plan Price": s.plan_price,
+        "Payment Status": s.payment_status,
+        "Payment Transaction ID": s.payment_transaction_id || "",
+        "Subscription Start": s.subscription_start_date,
+        "Subscription End": s.subscription_end_date,
+        "Order Timestamp": s.order_timestamp,
+      };
+    });
+
+    if (rows.length === 0) {
+      toast({ title: "No data to export", description: "Apply filters and ensure there are results.", variant: "destructive" });
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
+    XLSX.writeFile(wb, `BKT_TAAS_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast({ title: "Exported!", description: `${rows.length} records exported to Excel.` });
+  };
 
   const handleLogin = () => {
     if (otp === "1234") {
@@ -182,11 +282,16 @@ const AdminDashboard: React.FC = () => {
         </Card>
 
         <Tabs defaultValue="subscriptions" className="space-y-4">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-            <TabsTrigger value="registrations">Registrations</TabsTrigger>
-            <TabsTrigger value="dealers">Dealers</TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+              <TabsTrigger value="registrations">Registrations</TabsTrigger>
+              <TabsTrigger value="dealers">Dealers</TabsTrigger>
+            </TabsList>
+            <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-2">
+              <Download size={14} /> Export to Excel
+            </Button>
+          </div>
 
           <TabsContent value="subscriptions">
             <Card className="shadow-card">
@@ -205,7 +310,7 @@ const AdminDashboard: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSubs.map((sub) => (
+                    {paginate(filteredSubs, subPage).map((sub) => (
                       <TableRow key={sub.order_id}>
                         <TableCell className="font-mono text-xs">{sub.order_id}</TableCell>
                         <TableCell>
@@ -225,6 +330,7 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls page={subPage} setPage={setSubPage} total={filteredSubs.length} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -245,7 +351,7 @@ const AdminDashboard: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCustomers.map((c) => (
+                    {paginate(filteredCustomers, custPage).map((c) => (
                       <TableRow key={c.customer_code}>
                         <TableCell className="font-mono text-xs">{c.customer_code}</TableCell>
                         <TableCell className="font-medium">{c.customer_name}</TableCell>
@@ -264,6 +370,7 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls page={custPage} setPage={setCustPage} total={filteredCustomers.length} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -284,7 +391,7 @@ const AdminDashboard: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dealers.map((d) => (
+                    {paginate(dealers, dealerPage).map((d) => (
                       <TableRow key={d.dealer_code}>
                         <TableCell className="font-mono text-xs">{d.dealer_code}</TableCell>
                         <TableCell className="font-medium">{d.dealer_name}</TableCell>
@@ -300,6 +407,7 @@ const AdminDashboard: React.FC = () => {
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls page={dealerPage} setPage={setDealerPage} total={dealers.length} />
               </CardContent>
             </Card>
           </TabsContent>
