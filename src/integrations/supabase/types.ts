@@ -25,7 +25,9 @@ export type Database = {
           id: string
           invoice_number: string | null
           mobile_number: string
+          number_of_tyres: number | null
           registration_date: string
+          state: string | null
           tyre_details: string | null
           updated_at: string
           vehicle_make_model: string | null
@@ -41,7 +43,9 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           mobile_number: string
+          number_of_tyres?: number | null
           registration_date?: string
+          state?: string | null
           tyre_details?: string | null
           updated_at?: string
           vehicle_make_model?: string | null
@@ -57,7 +61,9 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           mobile_number?: string
+          number_of_tyres?: number | null
           registration_date?: string
+          state?: string | null
           tyre_details?: string | null
           updated_at?: string
           vehicle_make_model?: string | null
