@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import * as XLSX from "xlsx";
 
@@ -37,11 +37,13 @@ const AdminDashboard: React.FC = () => {
   const [custPage, setCustPage] = useState(1);
   const [dealerPage, setDealerPage] = useState(1);
 
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (loggedIn) fetchData();
   }, [loggedIn]);
 
-  // Reset pages when filters change
   useEffect(() => { setSubPage(1); setCustPage(1); setDealerPage(1); }, [filterPlan, filterDealer, searchQuery, dateFrom, dateTo]);
 
   const fetchData = async () => {
@@ -80,7 +82,6 @@ const AdminDashboard: React.FC = () => {
     return true;
   });
 
-  // Pagination helpers
   const paginate = <T,>(data: T[], page: number) => {
     const start = (page - 1) * PAGE_SIZE;
     return data.slice(start, start + PAGE_SIZE);
@@ -117,7 +118,6 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
-  // Excel export: join all data for filtered results
   const exportToExcel = () => {
     const dealerMap = Object.fromEntries(dealers.map((d) => [d.dealer_code, d]));
     const customerMap = Object.fromEntries(customers.map((c) => [c.customer_code, c]));
@@ -168,6 +168,95 @@ const AdminDashboard: React.FC = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
     XLSX.writeFile(wb, `BKT_TAAS_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast({ title: "Exported!", description: `${rows.length} records exported to Excel.` });
+  };
+
+  // CSV Dealer Import
+  const handleDealerCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith(".csv")) {
+      toast({ title: "Invalid file", description: "Please upload a .csv file.", variant: "destructive" });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (lines.length < 2) {
+        toast({ title: "Empty file", description: "CSV must have a header row and at least one data row.", variant: "destructive" });
+        setImporting(false);
+        return;
+      }
+
+      const header = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/"/g, ""));
+      const codeIdx = header.findIndex((h) => h.includes("dealer") && h.includes("code"));
+      const statusIdx = header.findIndex((h) => h.includes("status"));
+
+      if (codeIdx === -1 || statusIdx === -1) {
+        toast({ title: "Invalid CSV format", description: "CSV must have 'Dealer Code' and 'Status' columns.", variant: "destructive" });
+        setImporting(false);
+        return;
+      }
+
+      let added = 0, updated = 0, errors = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
+        const dealerCode = cols[codeIdx]?.toUpperCase();
+        const status = cols[statusIdx]?.toUpperCase();
+
+        if (!dealerCode || !status) { errors++; continue; }
+        if (status !== "ACTIVE" && status !== "INACTIVE") { errors++; continue; }
+
+        // Check if dealer exists
+        const { data: existing } = await supabase
+          .from("dealers")
+          .select("dealer_code")
+          .eq("dealer_code", dealerCode)
+          .maybeSingle();
+
+        if (existing) {
+          // Update status
+          await supabase
+            .from("dealers")
+            .update({ dealer_status: status })
+            .eq("dealer_code", dealerCode);
+          updated++;
+        } else {
+          // Insert new dealer with minimal info
+          await supabase
+            .from("dealers")
+            .insert({
+              dealer_code: dealerCode,
+              dealer_name: dealerCode, // placeholder
+              dealer_mobile_number: "0000000000", // placeholder
+              dealer_status: status,
+            });
+          added++;
+        }
+      }
+
+      toast({
+        title: "Import Complete",
+        description: `${added} added, ${updated} updated${errors > 0 ? `, ${errors} skipped` : ""}.`,
+      });
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Import Error", description: err.message, variant: "destructive" });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const downloadCSVTemplate = () => {
+    const csv = "Dealer Code,Status\nDLR00001,ACTIVE\nDLR00002,INACTIVE\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "dealer_import_template.csv";
+    link.click();
   };
 
   const handleLogin = () => {
@@ -288,9 +377,29 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="registrations">Registrations</TabsTrigger>
               <TabsTrigger value="dealers">Dealers</TabsTrigger>
             </TabsList>
-            <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-2">
-              <Download size={14} /> Export to Excel
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-2">
+                <Download size={14} /> Export Excel
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadCSVTemplate} className="gap-2">
+                <Download size={14} /> CSV Template
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+              >
+                <Upload size={14} /> {importing ? "Importing..." : "Import Dealers"}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleDealerCSVUpload}
+              />
+            </div>
           </div>
 
           <TabsContent value="subscriptions">
@@ -398,7 +507,11 @@ const AdminDashboard: React.FC = () => {
                         <TableCell>{d.dealer_mobile_number}</TableCell>
                         <TableCell>{d.dealer_city}</TableCell>
                         <TableCell>{d.dealer_state}</TableCell>
-                        <TableCell><Badge className="bg-success/15 text-success border-0">{d.dealer_status}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={d.dealer_status === "ACTIVE" ? "bg-success/15 text-success border-0" : "bg-destructive/15 text-destructive border-0"}>
+                            {d.dealer_status}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-sm">{d.dealer_enrollment_date}</TableCell>
                       </TableRow>
                     ))}
