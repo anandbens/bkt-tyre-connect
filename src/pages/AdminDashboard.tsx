@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight, Upload, LogOut } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import * as XLSX from "xlsx";
 
@@ -18,10 +19,11 @@ const PAGE_SIZE = 10;
 
 const AdminDashboard: React.FC = () => {
   const { toast } = useToast();
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const { user, loading: authLoading, userRole, signIn, signUp, signOut } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const [filterPlan, setFilterPlan] = useState("all");
   const [filterDealer, setFilterDealer] = useState("all");
@@ -41,8 +43,8 @@ const AdminDashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (loggedIn) fetchData();
-  }, [loggedIn]);
+    if (user && userRole === 'admin') fetchData();
+  }, [user, userRole]);
 
   useEffect(() => { setSubPage(1); setCustPage(1); setDealerPage(1); }, [filterPlan, filterDealer, searchQuery, dateFrom, dateTo]);
 
@@ -259,16 +261,54 @@ const AdminDashboard: React.FC = () => {
     link.click();
   };
 
-  const handleLogin = () => {
-    if (otp === "1234") {
-      setLoggedIn(true);
-      toast({ title: "Welcome, Admin", description: "Admin dashboard loaded." });
-    } else {
-      toast({ title: "Invalid OTP", variant: "destructive" });
+  const handleLogin = async () => {
+    setAuthError("");
+    if (!email || !password) {
+      setAuthError("Please enter email and password.");
+      return;
     }
+    const { error } = await signIn(email, password);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    toast({ title: "Welcome, Admin", description: "Admin dashboard loaded." });
   };
 
-  if (!loggedIn) {
+  const handleSignUp = async () => {
+    setAuthError("");
+    if (!email || !password) {
+      setAuthError("Please enter email and password.");
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError("Password must be at least 6 characters.");
+      return;
+    }
+    const { data, error } = await signUp(email, password);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    // Assign admin role
+    if (data?.user) {
+      await supabase.from("user_roles").insert({
+        user_id: data.user.id,
+        role: "admin" as any,
+      });
+    }
+    toast({ title: "Account created!", description: "You are now logged in as admin." });
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[calc(100vh-56px)] bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || userRole !== 'admin') {
     return (
       <div className="min-h-[calc(100vh-56px)] bg-background flex items-center justify-center px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -277,30 +317,32 @@ const AdminDashboard: React.FC = () => {
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <ShieldCheck className="text-primary" size={24} />
               </div>
-              <CardTitle>Admin Login</CardTitle>
+              <CardTitle>{isSignUp ? "Create Admin Account" : "Admin Login"}</CardTitle>
               <p className="text-sm text-muted-foreground">BKT / BIW Admin access</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!otpSent ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>Mobile Number</Label>
-                    <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit number" maxLength={10} />
-                  </div>
-                  <Button onClick={() => { setOtpSent(true); toast({ title: "OTP Sent", description: "Use 1234 for demo." }); }} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                    Send OTP <ArrowRight size={16} className="ml-1" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>Enter OTP</Label>
-                    <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="4-digit OTP" maxLength={4} className="text-center tracking-widest" />
-                  </div>
-                  <Button onClick={handleLogin} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                    Login
-                  </Button>
-                </>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@example.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Password</Label>
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
+              </div>
+              {authError && <p className="text-sm text-destructive">{authError}</p>}
+              {user && userRole !== 'admin' && (
+                <p className="text-sm text-destructive">Your account does not have admin access.</p>
+              )}
+              <Button onClick={isSignUp ? handleSignUp : handleLogin} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                {isSignUp ? "Create Account" : "Login"} <ArrowRight size={16} className="ml-1" />
+              </Button>
+              <button onClick={() => { setIsSignUp(!isSignUp); setAuthError(""); }} className="text-sm text-muted-foreground hover:text-foreground w-full text-center">
+                {isSignUp ? "Already have an account? Login" : "Need an account? Sign Up"}
+              </button>
+              {user && (
+                <Button variant="outline" onClick={signOut} className="w-full">
+                  Sign Out
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -313,8 +355,15 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-[calc(100vh-56px)] bg-background">
       <div className="bg-primary text-primary-foreground py-6 sm:py-8 px-4">
         <div className="container mx-auto max-w-7xl">
-          <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
-          <p className="text-xs sm:text-sm opacity-70">BKT Crossroads – Consolidated View</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold">Admin Dashboard</h1>
+              <p className="text-xs sm:text-sm opacity-70">BKT Crossroads – Consolidated View</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 gap-1">
+              <LogOut size={14} /> Sign Out
+            </Button>
+          </div>
         </div>
       </div>
 

@@ -10,36 +10,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, Calendar } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, Calendar, LogOut } from "lucide-react";
 
 const DealerDashboard: React.FC = () => {
   const { toast } = useToast();
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+  const { user, loading: authLoading, userRole, dealerCode, signIn, signUp, signOut } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [dealerCodeInput, setDealerCodeInput] = useState("");
   const [filterPlan, setFilterPlan] = useState("all");
   const [searchCustomer, setSearchCustomer] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [customers, setCustomers] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
-
-  const dealerCode = "DLR12345";
+  const [dealerInfo, setDealerInfo] = useState<any>(null);
 
   useEffect(() => {
-    if (loggedIn) {
+    if (user && userRole === 'dealer' && dealerCode) {
       fetchData();
     }
-  }, [loggedIn]);
+  }, [user, userRole, dealerCode]);
 
   const fetchData = async () => {
-    const [custRes, subRes] = await Promise.all([
+    if (!dealerCode) return;
+    const [custRes, subRes, dlrRes] = await Promise.all([
       supabase.from("customers").select("*").eq("dealer_code", dealerCode),
       supabase.from("subscriptions").select("*").eq("dealer_code", dealerCode),
+      supabase.from("dealers").select("*").eq("dealer_code", dealerCode).maybeSingle(),
     ]);
     if (custRes.data) setCustomers(custRes.data);
     if (subRes.data) setSubscriptions(subRes.data);
+    if (dlrRes.data) setDealerInfo(dlrRes.data);
   };
 
   const conversionRate = customers.length > 0 ? Math.round((subscriptions.length / customers.length) * 100) : 0;
@@ -55,16 +60,68 @@ const DealerDashboard: React.FC = () => {
     return true;
   });
 
-  const handleLogin = () => {
-    if (otp === "1234") {
-      setLoggedIn(true);
-      toast({ title: "Welcome, Sharma Tyres!", description: "Dealer dashboard loaded." });
-    } else {
-      toast({ title: "Invalid OTP", variant: "destructive" });
+  const handleLogin = async () => {
+    setAuthError("");
+    if (!email || !password) {
+      setAuthError("Please enter email and password.");
+      return;
     }
+    const { error } = await signIn(email, password);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    toast({ title: "Welcome!", description: "Dealer dashboard loaded." });
   };
 
-  if (!loggedIn) {
+  const handleSignUp = async () => {
+    setAuthError("");
+    if (!email || !password || !dealerCodeInput) {
+      setAuthError("Please enter email, password, and dealer code.");
+      return;
+    }
+    if (password.length < 6) {
+      setAuthError("Password must be at least 6 characters.");
+      return;
+    }
+    // Validate dealer code exists and is active
+    const { data: dealer } = await supabase
+      .from("dealers")
+      .select("dealer_code, dealer_status")
+      .eq("dealer_code", dealerCodeInput.toUpperCase())
+      .maybeSingle();
+    if (!dealer) {
+      setAuthError("Dealer code not found.");
+      return;
+    }
+    if (dealer.dealer_status !== "ACTIVE") {
+      setAuthError("This dealer code is inactive.");
+      return;
+    }
+    const { data, error } = await signUp(email, password);
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (data?.user) {
+      await supabase.from("user_roles").insert({
+        user_id: data.user.id,
+        role: "dealer" as any,
+        dealer_code: dealerCodeInput.toUpperCase(),
+      });
+    }
+    toast({ title: "Account created!", description: "You are now logged in as a dealer." });
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[calc(100vh-56px)] bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || userRole !== 'dealer') {
     return (
       <div className="min-h-[calc(100vh-56px)] bg-background flex items-center justify-center px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -73,30 +130,38 @@ const DealerDashboard: React.FC = () => {
               <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
                 <Phone className="text-accent" size={24} />
               </div>
-              <CardTitle>Dealer Login</CardTitle>
-              <p className="text-sm text-muted-foreground">Enter your registered mobile number</p>
+              <CardTitle>{isSignUp ? "Create Dealer Account" : "Dealer Login"}</CardTitle>
+              <p className="text-sm text-muted-foreground">Enter your credentials</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!otpSent ? (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>Mobile Number</Label>
-                    <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit number" maxLength={10} />
-                  </div>
-                  <Button onClick={() => { setOtpSent(true); toast({ title: "OTP Sent", description: "Use 1234 for demo." }); }} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    Send OTP <ArrowRight size={16} className="ml-1" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-1.5">
-                    <Label>Enter OTP</Label>
-                    <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="4-digit OTP" maxLength={4} className="text-center tracking-widest" />
-                  </div>
-                  <Button onClick={handleLogin} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    Login
-                  </Button>
-                </>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="dealer@example.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Password</Label>
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" />
+              </div>
+              {isSignUp && (
+                <div className="space-y-1.5">
+                  <Label>Dealer Code</Label>
+                  <Input value={dealerCodeInput} onChange={(e) => setDealerCodeInput(e.target.value)} placeholder="e.g. DLR12345" />
+                </div>
+              )}
+              {authError && <p className="text-sm text-destructive">{authError}</p>}
+              {user && userRole !== 'dealer' && (
+                <p className="text-sm text-destructive">Your account does not have dealer access.</p>
+              )}
+              <Button onClick={isSignUp ? handleSignUp : handleLogin} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                {isSignUp ? "Create Account" : "Login"} <ArrowRight size={16} className="ml-1" />
+              </Button>
+              <button onClick={() => { setIsSignUp(!isSignUp); setAuthError(""); }} className="text-sm text-muted-foreground hover:text-foreground w-full text-center">
+                {isSignUp ? "Already have an account? Login" : "Need an account? Sign Up"}
+              </button>
+              {user && (
+                <Button variant="outline" onClick={signOut} className="w-full">
+                  Sign Out
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -112,9 +177,14 @@ const DealerDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg sm:text-xl font-bold">Dealer Dashboard</h1>
-              <p className="text-xs sm:text-sm opacity-70">Sharma Tyres · {dealerCode}</p>
+              <p className="text-xs sm:text-sm opacity-70">{dealerInfo?.dealer_name || "Dealer"} · {dealerCode}</p>
             </div>
-            <Badge className="bg-success text-success-foreground">Active</Badge>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-success text-success-foreground">Active</Badge>
+              <Button variant="ghost" size="sm" onClick={signOut} className="text-primary-foreground hover:bg-primary-foreground/10 gap-1">
+                <LogOut size={14} /> Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </div>

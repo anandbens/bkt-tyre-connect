@@ -244,15 +244,51 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          dealer_code: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          dealer_code?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          dealer_code?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_dealer_code_fkey"
+            columns: ["dealer_code"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["dealer_code"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_dealer_code: { Args: { _user_id: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "dealer" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -379,6 +415,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "dealer", "customer"],
+    },
   },
 } as const
