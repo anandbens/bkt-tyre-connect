@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, Shield, FileText, QrCode } from "lucide-react";
+import bktLogo from "@/assets/bkt-logo.png";
 
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -15,11 +16,9 @@ const AppHeader: React.FC = () => {
 
   return (
     <header className="bg-primary text-primary-foreground shadow-elevated sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="container mx-auto px-4 py-2 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center font-bold text-accent-foreground text-lg">
-            BKT
-          </div>
+          <img src={bktLogo} alt="BKT Logo" className="h-10 w-auto" />
           <div>
             <div className="font-bold text-sm tracking-wide">Crossroads TAAS</div>
             <div className="text-xs opacity-70">Tyre Assistance & Service</div>
