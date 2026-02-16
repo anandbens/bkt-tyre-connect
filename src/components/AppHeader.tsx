@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Shield, FileText } from "lucide-react";
+import { LayoutDashboard, Users, Shield, FileText, QrCode } from "lucide-react";
 
 const AppHeader: React.FC = () => {
   const location = useLocation();
@@ -10,6 +10,7 @@ const AppHeader: React.FC = () => {
     { to: "/plans", label: "Plans", icon: LayoutDashboard },
     { to: "/dealer", label: "Dealer", icon: Users },
     { to: "/admin", label: "Admin", icon: Shield },
+    { to: "/qr", label: "QR Code", icon: QrCode },
   ];
 
   return (
