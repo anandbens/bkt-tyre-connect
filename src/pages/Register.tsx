@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import StepIndicator from "@/components/StepIndicator";
 import { CheckCircle, Truck, User, ShoppingBag, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
 
 const steps = ["Mobile & OTP", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
@@ -92,8 +94,8 @@ const Register: React.FC = () => {
 
   // Step 2: Save personal details
   const savePersonalDetails = async () => {
-    if (!form.name || !form.city) {
-      toast({ title: "Missing fields", description: "Name and City are mandatory.", variant: "destructive" });
+    if (!form.name || !form.state || !form.city) {
+      toast({ title: "Missing fields", description: "Name, State and City are mandatory.", variant: "destructive" });
       return;
     }
     try {
@@ -224,12 +226,30 @@ const Register: React.FC = () => {
                         <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="state">State</Label>
-                        <Input id="state" value={form.state} onChange={(e) => updateField("state", e.target.value)} placeholder="State" />
+                        <Label htmlFor="state">State *</Label>
+                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white max-h-60 z-50">
+                            {indianStates.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="city">City *</Label>
-                        <Input id="city" value={form.city} onChange={(e) => updateField("city", e.target.value)} placeholder="City" />
+                        <Select value={form.city} onValueChange={(val) => updateField("city", val)} disabled={!form.state}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={form.state ? "Select City" : "Select state first"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white max-h-60 z-50">
+                            {(form.state ? indiaStatesAndCities[form.state] || [] : []).map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="flex justify-end pt-2">
