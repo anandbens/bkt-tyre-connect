@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
 
-const steps = ["Mobile & OTP", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+const steps = ["Register / Login", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
