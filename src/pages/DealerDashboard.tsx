@@ -11,13 +11,13 @@ import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, Mail } from "lucide-react";
+import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const DealerDashboard: React.FC = () => {
   const { toast } = useToast();
   const { user, loading: authLoading, userRole, dealerCode, signOut } = useAuth();
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [authError, setAuthError] = useState("");
@@ -64,19 +64,25 @@ const DealerDashboard: React.FC = () => {
 
   const handleSendOtp = async () => {
     setAuthError("");
-    if (!email) {
-      setAuthError("Please enter your email.");
+    if (!phone || phone.length < 10) {
+      setAuthError("Please enter a valid 10-digit mobile number.");
       return;
     }
     setSendingOtp(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) {
-        setAuthError(error.message);
+      const res = await supabase.functions.invoke("dealer-phone-otp", {
+        body: { phone, action: "send" },
+      });
+      if (res.error) {
+        setAuthError(res.error.message || "Failed to send OTP");
+        return;
+      }
+      if (res.data?.error) {
+        setAuthError(res.data.error);
         return;
       }
       setOtpSent(true);
-      toast({ title: "OTP Sent!", description: `Check your email (${email}) for the login code.` });
+      toast({ title: "OTP Sent!", description: `Enter the OTP sent to ${phone}` });
     } finally {
       setSendingOtp(false);
     }
@@ -84,15 +90,31 @@ const DealerDashboard: React.FC = () => {
 
   const handleVerifyOtp = async () => {
     setAuthError("");
-    if (!otp || otp.length < 6) {
-      setAuthError("Please enter the 6-digit code.");
+    if (!otp || otp.length < 4) {
+      setAuthError("Please enter the 4-digit OTP.");
       return;
     }
     setVerifyingOtp(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
-      if (error) {
-        setAuthError(error.message);
+      const res = await supabase.functions.invoke("dealer-phone-otp", {
+        body: { phone, otp, action: "verify" },
+      });
+      if (res.error) {
+        setAuthError(res.error.message || "Verification failed");
+        return;
+      }
+      if (res.data?.error) {
+        setAuthError(res.data.error);
+        return;
+      }
+
+      // Use the token_hash to complete sign-in
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        token_hash: res.data.token_hash,
+        type: "magiclink",
+      });
+      if (verifyErr) {
+        setAuthError(verifyErr.message);
         return;
       }
       toast({ title: "Welcome!", description: "Dealer dashboard loaded." });
@@ -120,19 +142,20 @@ const DealerDashboard: React.FC = () => {
               </div>
               <CardTitle>Dealer Login</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {otpSent ? "Enter the code sent to your email" : "Sign in with your registered email"}
+                {otpSent ? "Enter the OTP sent to your mobile" : "Sign in with your registered mobile number"}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               {!otpSent ? (
                 <>
                   <div className="space-y-1.5">
-                    <Label>Email</Label>
+                    <Label>Mobile Number</Label>
                     <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="dealer@example.com"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      placeholder="Enter 10-digit mobile number"
+                      maxLength={10}
                       onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
                     />
                   </div>
@@ -141,22 +164,20 @@ const DealerDashboard: React.FC = () => {
                     <p className="text-sm text-destructive">Your account does not have dealer access.</p>
                   )}
                   <Button onClick={handleSendOtp} disabled={sendingOtp} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    {sendingOtp ? "Sending..." : "Send OTP"} <Mail size={16} className="ml-1" />
+                    {sendingOtp ? "Sending..." : "Send OTP"} <Phone size={16} className="ml-1" />
                   </Button>
                 </>
               ) : (
                 <>
                   <div className="space-y-1.5">
-                    <Label>Enter 6-digit code</Label>
+                    <Label>Enter 4-digit OTP</Label>
                     <div className="flex justify-center">
-                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                      <InputOTP maxLength={4} value={otp} onChange={setOtp}>
                         <InputOTPGroup>
                           <InputOTPSlot index={0} />
                           <InputOTPSlot index={1} />
                           <InputOTPSlot index={2} />
                           <InputOTPSlot index={3} />
-                          <InputOTPSlot index={4} />
-                          <InputOTPSlot index={5} />
                         </InputOTPGroup>
                       </InputOTP>
                     </div>
@@ -169,7 +190,7 @@ const DealerDashboard: React.FC = () => {
                     onClick={() => { setOtpSent(false); setOtp(""); setAuthError(""); }}
                     className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
                   >
-                    ← Change email
+                    ← Change number
                   </button>
                 </>
               )}
