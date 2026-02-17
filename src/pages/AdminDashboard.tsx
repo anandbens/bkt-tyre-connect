@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight, Upload, LogOut } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import * as XLSX from "xlsx";
+
 
 const PAGE_SIZE = 10;
 
@@ -165,11 +165,23 @@ const AdminDashboard: React.FC = () => {
       return;
     }
 
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
-    XLSX.writeFile(wb, `BKT_TAAS_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    toast({ title: "Exported!", description: `${rows.length} records exported to Excel.` });
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => headers.map(h => {
+        const val = String((row as Record<string, string>)[h] ?? "").replace(/"/g, '""');
+        return `"${val}"`;
+      }).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `BKT_TAAS_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Exported!", description: `${rows.length} records exported to CSV.` });
   };
 
   // CSV Dealer Import
