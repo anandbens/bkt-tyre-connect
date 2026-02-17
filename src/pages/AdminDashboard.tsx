@@ -22,7 +22,7 @@ const AdminDashboard: React.FC = () => {
   const { user, loading: authLoading, userRole, signIn, signUp, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
+  
   const [authError, setAuthError] = useState("");
 
   const [filterPlan, setFilterPlan] = useState("all");
@@ -287,30 +287,7 @@ const AdminDashboard: React.FC = () => {
     toast({ title: "Welcome, Admin", description: "Admin dashboard loaded." });
   };
 
-  const handleSignUp = async () => {
-    setAuthError("");
-    if (!email || !password) {
-      setAuthError("Please enter email and password.");
-      return;
-    }
-    if (password.length < 6) {
-      setAuthError("Password must be at least 6 characters.");
-      return;
-    }
-    const { data, error } = await signUp(email, password);
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-    // Assign admin role
-    if (data?.user) {
-      await supabase.from("user_roles").insert({
-        user_id: data.user.id,
-        role: "admin" as any,
-      });
-    }
-    toast({ title: "Account created!", description: "You are now logged in as admin." });
-  };
+  
 
   if (authLoading) {
     return (
@@ -329,7 +306,7 @@ const AdminDashboard: React.FC = () => {
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <ShieldCheck className="text-primary" size={24} />
               </div>
-              <CardTitle>{isSignUp ? "Create Admin Account" : "Admin Login"}</CardTitle>
+              <CardTitle>Admin Login</CardTitle>
               <p className="text-sm text-muted-foreground">BKT / BIW Admin access</p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -345,12 +322,9 @@ const AdminDashboard: React.FC = () => {
               {user && userRole !== 'admin' && (
                 <p className="text-sm text-destructive">Your account does not have admin access.</p>
               )}
-              <Button onClick={isSignUp ? handleSignUp : handleLogin} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                {isSignUp ? "Create Account" : "Login"} <ArrowRight size={16} className="ml-1" />
+              <Button onClick={handleLogin} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                Login <ArrowRight size={16} className="ml-1" />
               </Button>
-              <button onClick={() => { setIsSignUp(!isSignUp); setAuthError(""); }} className="text-sm text-muted-foreground hover:text-foreground w-full text-center">
-                {isSignUp ? "Already have an account? Login" : "Need an account? Sign Up"}
-              </button>
               {user && (
                 <Button variant="outline" onClick={signOut} className="w-full">
                   Sign Out
