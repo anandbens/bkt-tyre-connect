@@ -86,6 +86,7 @@ const Register: React.FC = () => {
       toast({ title: "OTP Verified!", description: "You are now registered. Please complete your profile." });
       setStep(1);
     } catch (err: any) {
+      if (err?.name === 'AbortError') return;
       toast({ title: "Registration Error", description: err.message, variant: "destructive" });
     } finally {
       setRegistering(false);
