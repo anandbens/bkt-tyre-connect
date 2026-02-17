@@ -55,7 +55,9 @@ export function useAuth() {
         setDealerCode(null);
       }
       if (mounted) setLoading(false);
-    }).catch(() => {
+    }).catch((err) => {
+      // Ignore AbortError from unmount/navigation
+      if (err?.name === 'AbortError') return;
       if (mounted) setLoading(false);
     });
 
