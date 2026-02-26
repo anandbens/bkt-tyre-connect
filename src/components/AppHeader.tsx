@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Shield, FileText, QrCode, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Shield, FileText, Menu, X } from "lucide-react";
 import bktLogo from "@/assets/bkt-logo.png";
 
 const AppHeader: React.FC = () => {
@@ -12,7 +12,6 @@ const AppHeader: React.FC = () => {
     { to: "/plans", label: "Plans", icon: LayoutDashboard },
     { to: "/dealer", label: "Dealer", icon: Users },
     { to: "/admin", label: "Admin", icon: Shield },
-    { to: "/qr", label: "QR Code", icon: QrCode },
   ];
 
   return (

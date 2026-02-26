@@ -345,7 +345,8 @@ const Register: React.FC = () => {
                         </Select>
                       </div>
                     </div>
-                    <div className="flex justify-end pt-2">
+                    <div className="flex justify-between pt-2">
+                      <Button variant="outline" onClick={() => { setStep(0); setOtpSent(false); setOtp(""); }}>← Back</Button>
                       <Button onClick={savePersonalDetails} className="bg-accent text-accent-foreground hover:bg-accent/90">
                         Next: Vehicle Details →
                       </Button>
