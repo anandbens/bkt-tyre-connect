@@ -61,21 +61,29 @@ const Register: React.FC = () => {
     }
     setRegistering(true);
     try {
-      // Check if this mobile number is already registered
-      const { data: existingCust } = await supabase
+      // Check if this mobile number is already registered (may have multiple rows)
+      const { data: existingCustList } = await supabase
         .from("customers")
         .select("*")
         .eq("mobile_number", form.mobile)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
+
+      // Pick the most complete record (one with a real name, not just the mobile number)
+      const existingCust = existingCustList && existingCustList.length > 0
+        ? existingCustList.find(c => c.customer_name !== c.mobile_number && c.city !== "—") || existingCustList[0]
+        : null;
 
       if (existingCust) {
-        // Customer exists — check if they have a completed subscription
-        const { data: existingSub } = await supabase
+        // Check if ANY of the customer's registrations have a completed subscription
+        const allCodes = existingCustList!.map(c => c.customer_code);
+        const { data: existingSubList } = await supabase
           .from("subscriptions")
           .select("*")
-          .eq("customer_code", existingCust.customer_code)
+          .in("customer_code", allCodes)
           .eq("payment_status", "SUCCESS")
-          .maybeSingle();
+          .limit(1);
+
+        const existingSub = existingSubList && existingSubList.length > 0 ? existingSubList[0] : null;
 
         if (existingSub) {
           // Fully completed — show message
