@@ -6,16 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { plans } from "@/data/mockData";
-import { Check, Star, CreditCard, CheckCircle, Loader2 } from "lucide-react";
+import { Check, Star, CreditCard, CheckCircle, Loader2, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
+const PAYMENT_METHODS = [
+  { id: "upi", label: "UPI", icon: "📱" },
+  { id: "card", label: "Credit/Debit Card", icon: "💳" },
+  { id: "netbanking", label: "Net Banking", icon: "🏦" },
+  { id: "wallet", label: "Wallets", icon: "👛" },
+];
 
 const PlanSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -23,9 +27,10 @@ const PlanSelection: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentDone, setPaymentDone] = useState(false);
-  const [processing, setProcessing] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<"confirm" | "processing" | "success">("confirm");
+  const [paymentStep, setPaymentStep] = useState<"methods" | "upi" | "processing" | "success">("methods");
+  const [upiId, setUpiId] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [orderDetails, setOrderDetails] = useState<{ orderId: string; plan: typeof plans[0] } | null>(null);
 
   const customerCode = searchParams.get("customer") || "";
@@ -36,21 +41,31 @@ const PlanSelection: React.FC = () => {
   const handlePayment = () => {
     if (!selectedPlan) return;
     setShowPaymentDialog(true);
-    setPaymentStep("confirm");
+    setPaymentStep("methods");
+    setSelectedMethod(null);
+    setUpiId("");
+  };
+
+  const selectPaymentMethod = (methodId: string) => {
+    setSelectedMethod(methodId);
+    if (methodId === "upi") {
+      setPaymentStep("upi");
+    } else {
+      // For non-UPI, go straight to processing
+      processPayment();
+    }
   };
 
   const processPayment = async () => {
     const plan = plans.find((p) => p.id === selectedPlan)!;
     setPaymentStep("processing");
 
-    // Simulate payment processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     try {
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + (plan.duration.includes("12") ? 12 : 6));
-
-      const simulatedTxnId = "DEMO_" + Date.now().toString(36).toUpperCase();
+      const simulatedTxnId = "PAY_" + Date.now().toString(36).toUpperCase();
 
       const { data, error } = await supabase
         .from("subscriptions")
@@ -81,10 +96,10 @@ const PlanSelection: React.FC = () => {
     } catch (err: any) {
       setShowPaymentDialog(false);
       toast({ title: "Error saving subscription", description: err.message, variant: "destructive" });
-    } finally {
-      setProcessing(false);
     }
   };
+
+  const currentPlan = plans.find((p) => p.id === selectedPlan);
 
   if (paymentDone && orderDetails) {
     return (
@@ -112,8 +127,6 @@ const PlanSelection: React.FC = () => {
       </div>
     );
   }
-
-  const currentPlan = plans.find((p) => p.id === selectedPlan);
 
   return (
     <div className="min-h-[calc(100vh-56px)] bg-background">
@@ -174,51 +187,78 @@ const PlanSelection: React.FC = () => {
             <Button
               size="lg"
               onClick={handlePayment}
-              disabled={processing}
               className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-accent gap-2 px-8"
             >
               <CreditCard size={18} />
-              {processing ? "Processing..." : `Pay ₹${plans.find((p) => p.id === selectedPlan)?.price} Now`}
+              {`Pay ₹${plans.find((p) => p.id === selectedPlan)?.price} Now`}
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">Demo Payment · Simulated Flow</p>
+            <p className="text-xs text-muted-foreground mt-2">Secure Payment · Demo Mode</p>
           </motion.div>
         )}
       </div>
 
-      {/* Simulated Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={(open) => { if (!open && paymentStep === "confirm") setShowPaymentDialog(false); }}>
-        <DialogContent className="sm:max-w-md">
-          {paymentStep === "confirm" && currentPlan && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Confirm Payment</DialogTitle>
-                <DialogDescription>Review your order before proceeding</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 py-4">
-                <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-semibold">{currentPlan.name}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span className="font-semibold">{currentPlan.duration}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Customer</span><span className="font-semibold">{customerName || "Guest"}</span></div>
-                  <div className="border-t pt-2 flex justify-between font-bold text-base"><span>Total</span><span>₹{currentPlan.price}</span></div>
-                </div>
-              </div>
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Cancel</Button>
-                <Button onClick={processPayment} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-                  <CreditCard size={16} /> Pay ₹{currentPlan.price}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-          {paymentStep === "processing" && (
-            <div className="py-12 text-center space-y-4">
-              <Loader2 size={48} className="mx-auto animate-spin text-accent" />
-              <p className="font-semibold text-lg">Processing Payment...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we confirm your payment</p>
+      {/* Payment Gateway Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={(open) => { if (!open && paymentStep === "methods") setShowPaymentDialog(false); }}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          {/* Header */}
+          <div className="bg-[hsl(210,70%,35%)] text-white px-5 py-4 flex items-center justify-between">
+            <div>
+              <div className="text-xs opacity-80">BKT Crossroads TAAS</div>
+              <div className="font-bold text-lg">₹{currentPlan?.price || 0}</div>
+            </div>
+            <div className="text-right text-xs opacity-80">
+              <div>Payment Gateway</div>
+              <div className="font-medium text-sm text-white/90">Demo Mode</div>
+            </div>
+          </div>
+
+          {paymentStep === "methods" && (
+            <div className="p-5 space-y-3">
+              <p className="text-sm font-medium text-muted-foreground mb-3">Select Payment Method</p>
+              {PAYMENT_METHODS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => selectPaymentMethod(m.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-secondary/50 transition-colors text-left"
+                >
+                  <span className="text-2xl">{m.icon}</span>
+                  <span className="font-medium text-sm">{m.label}</span>
+                </button>
+              ))}
             </div>
           )}
+
+          {paymentStep === "upi" && (
+            <div className="p-5 space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">Enter UPI ID</p>
+              <div className="flex items-center gap-2">
+                <Smartphone size={20} className="text-muted-foreground" />
+                <Input
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="yourname@upi"
+                  className="flex-1"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setPaymentStep("methods")} className="flex-1">Back</Button>
+                <Button onClick={processPayment} className="flex-1 bg-[hsl(210,70%,35%)] text-white hover:bg-[hsl(210,70%,30%)]">
+                  Pay ₹{currentPlan?.price}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {paymentStep === "processing" && (
+            <div className="py-14 text-center space-y-4">
+              <Loader2 size={48} className="mx-auto animate-spin text-[hsl(210,70%,35%)]" />
+              <p className="font-semibold text-lg">Processing Payment...</p>
+              <p className="text-sm text-muted-foreground">Please do not close this window</p>
+            </div>
+          )}
+
           {paymentStep === "success" && (
-            <div className="py-12 text-center space-y-4">
+            <div className="py-14 text-center space-y-4">
               <CheckCircle size={48} className="mx-auto text-success" />
               <p className="font-semibold text-lg">Payment Successful!</p>
               <p className="text-sm text-muted-foreground">Activating your subscription...</p>
