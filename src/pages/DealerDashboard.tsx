@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,42 @@ import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, QrCode, Download, Copy, Check } from "lucide-react";
+import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, QrCode, Download, Copy, Check, IndianRupee, Clock } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
 import bktLogoSrc from "@/assets/bkt-logo.png";
+
+// Commission rate (10% of plan price)
+const COMMISSION_RATE = 0.10;
+
+const getDateRange = (period: string): { from: string; to: string } => {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const todayStart = today;
+
+  switch (period) {
+    case "today":
+      return { from: todayStart, to: todayStart };
+    case "yesterday": {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const yd = y.toISOString().split("T")[0];
+      return { from: yd, to: yd };
+    }
+    case "last_week": {
+      const lw = new Date(now);
+      lw.setDate(lw.getDate() - 7);
+      return { from: lw.toISOString().split("T")[0], to: todayStart };
+    }
+    case "this_month": {
+      const fm = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+      return { from: fm, to: todayStart };
+    }
+    default:
+      return { from: "", to: "" };
+  }
+};
 
 const DealerDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -30,6 +61,7 @@ const DealerDashboard: React.FC = () => {
   const [searchCustomer, setSearchCustomer] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [timePeriod, setTimePeriod] = useState("all");
   const [customers, setCustomers] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [dealerInfo, setDealerInfo] = useState<any>(null);
@@ -43,6 +75,18 @@ const DealerDashboard: React.FC = () => {
     }
   }, [user, userRole, dealerCode]);
 
+  // Apply time period preset to date filters
+  useEffect(() => {
+    if (timePeriod === "all") {
+      setDateFrom("");
+      setDateTo("");
+    } else {
+      const range = getDateRange(timePeriod);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+  }, [timePeriod]);
+
   const fetchData = async () => {
     if (!dealerCode) return;
     const [custRes, subRes, dlrRes] = await Promise.all([
@@ -55,18 +99,50 @@ const DealerDashboard: React.FC = () => {
     if (dlrRes.data) setDealerInfo(dlrRes.data);
   };
 
+  const filteredCustomers = useMemo(() => {
+    return customers.filter((c) => {
+      if (dateFrom && c.registration_date < dateFrom) return false;
+      if (dateTo && c.registration_date > dateTo) return false;
+      if (searchCustomer) {
+        const q = searchCustomer.toLowerCase();
+        if (!c.customer_name.toLowerCase().includes(q) && !c.mobile_number.includes(searchCustomer) && !c.customer_code.includes(searchCustomer)) return false;
+      }
+      return true;
+    });
+  }, [customers, dateFrom, dateTo, searchCustomer]);
+
+  const filteredSubs = useMemo(() => {
+    return subscriptions.filter((s) => {
+      if (filterPlan !== "all" && s.plan_id !== filterPlan) return false;
+      if (searchCustomer) {
+        const q = searchCustomer.toLowerCase();
+        if (!s.customer_name.toLowerCase().includes(q) && !s.customer_code.includes(searchCustomer) && !(s.customer_mobile || "").includes(searchCustomer)) return false;
+      }
+      if (dateFrom && s.subscription_start_date < dateFrom) return false;
+      if (dateTo && s.subscription_start_date > dateTo) return false;
+      return true;
+    });
+  }, [subscriptions, filterPlan, searchCustomer, dateFrom, dateTo]);
+
   const conversionRate = customers.length > 0 ? Math.round((subscriptions.length / customers.length) * 100) : 0;
 
-  const filteredSubs = subscriptions.filter((s) => {
-    if (filterPlan !== "all" && s.plan_id !== filterPlan) return false;
-    if (searchCustomer) {
-      const q = searchCustomer.toLowerCase();
-      if (!s.customer_name.toLowerCase().includes(q) && !s.customer_code.includes(searchCustomer) && !(s.customer_mobile || "").includes(searchCustomer)) return false;
-    }
-    if (dateFrom && s.subscription_start_date < dateFrom) return false;
-    if (dateTo && s.subscription_start_date > dateTo) return false;
-    return true;
-  });
+  // Commission calculations
+  const totalEarned = useMemo(() => {
+    return filteredSubs
+      .filter((s) => s.payment_status === "SUCCESS")
+      .reduce((sum, s) => sum + (Number(s.plan_price) * COMMISSION_RATE), 0);
+  }, [filteredSubs]);
+
+  const totalInQueue = useMemo(() => {
+    // Registered customers who haven't subscribed yet — potential commission
+    const subscribedCodes = new Set(subscriptions.filter(s => s.payment_status === "SUCCESS").map(s => s.customer_code));
+    const pendingCount = filteredCustomers.filter(c => !subscribedCodes.has(c.customer_code)).length;
+    // Average plan price estimate for queue amount
+    const avgPrice = subscriptions.length > 0
+      ? subscriptions.reduce((sum, s) => sum + Number(s.plan_price), 0) / subscriptions.length
+      : 1499; // default to Gold plan price
+    return Math.round(pendingCount * avgPrice * COMMISSION_RATE);
+  }, [filteredCustomers, subscriptions]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(registrationUrl);
@@ -192,8 +268,6 @@ const DealerDashboard: React.FC = () => {
         setAuthError(res.data.error);
         return;
       }
-
-      // Use the token_hash to complete sign-in
       const { error: verifyErr } = await supabase.auth.verifyOtp({
         token_hash: res.data.token_hash,
         type: "magiclink",
@@ -311,12 +385,38 @@ const DealerDashboard: React.FC = () => {
       </div>
 
       <div className="container mx-auto max-w-6xl px-4 pt-4 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Total Registrations" value={customers.length} icon={Users} variant="accent" />
-          <StatCard title="Active Subscriptions" value={subscriptions.length} icon={ShieldCheck} variant="success" />
-          <StatCard title="Conversion Rate" value={`${conversionRate}%`} icon={TrendingUp} variant="info" description={`${subscriptions.length} of ${customers.length} converted`} />
+        {/* Time Period Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Label className="text-sm font-medium text-muted-foreground">Filter by:</Label>
+          {[
+            { value: "all", label: "All Time" },
+            { value: "today", label: "Today" },
+            { value: "yesterday", label: "Yesterday" },
+            { value: "last_week", label: "Last 7 Days" },
+            { value: "this_month", label: "This Month" },
+          ].map((opt) => (
+            <Button
+              key={opt.value}
+              variant={timePeriod === opt.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTimePeriod(opt.value)}
+              className={timePeriod === opt.value ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}
+            >
+              {opt.label}
+            </Button>
+          ))}
         </div>
 
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard title="Total Registrations" value={filteredCustomers.length} icon={Users} variant="accent" />
+          <StatCard title="Active Subscriptions" value={filteredSubs.filter(s => s.payment_status === "SUCCESS").length} icon={ShieldCheck} variant="success" />
+          <StatCard title="Conversion Rate" value={`${conversionRate}%`} icon={TrendingUp} variant="info" description={`${subscriptions.length} of ${customers.length} converted`} />
+          <StatCard title="Total Earned" value={`₹${totalEarned.toLocaleString("en-IN")}`} icon={IndianRupee} variant="success" description="Commission earned" />
+          <StatCard title="Amount in Queue" value={`₹${totalInQueue.toLocaleString("en-IN")}`} icon={Clock} variant="accent" description="Pending conversions" />
+        </div>
+
+        {/* Subscriptions Table */}
         <Card className="shadow-card">
           <CardHeader>
             <div className="flex flex-col gap-3">
@@ -332,8 +432,8 @@ const DealerDashboard: React.FC = () => {
                     <SelectItem value="PLAN_PLATINUM">Platinum</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="From" />
-                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="To" />
+                <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setTimePeriod("all"); }} placeholder="From" />
+                <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setTimePeriod("all"); }} placeholder="To" />
               </div>
             </div>
           </CardHeader>
@@ -345,6 +445,7 @@ const DealerDashboard: React.FC = () => {
                   <TableHead>Mobile</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Commission</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Valid Until</TableHead>
                 </TableRow>
@@ -359,13 +460,14 @@ const DealerDashboard: React.FC = () => {
                     <TableCell className="text-sm">{sub.customer_mobile || "—"}</TableCell>
                     <TableCell><Badge variant="outline">{sub.plan_name.replace(" Assistance Plan", "")}</Badge></TableCell>
                     <TableCell>₹{sub.plan_price}</TableCell>
+                    <TableCell className="text-success font-medium">₹{Math.round(Number(sub.plan_price) * COMMISSION_RATE)}</TableCell>
                     <TableCell><Badge className="bg-success/15 text-success border-0">{sub.payment_status}</Badge></TableCell>
                     <TableCell className="text-sm">{sub.subscription_end_date}</TableCell>
                   </TableRow>
                 ))}
                 {filteredSubs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">No subscriptions found.</TableCell>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No subscriptions found.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
