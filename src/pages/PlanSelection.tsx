@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { plans } from "@/data/mockData";
-import { Check, Star, CreditCard, CheckCircle } from "lucide-react";
+import { Check, Star, CreditCard, CheckCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
-const RAZORPAY_KEY = "rzp_test_1DP5mmOlF5G5ag"; // Razorpay test/sandbox key
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const PlanSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +24,8 @@ const PlanSelection: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [paymentDone, setPaymentDone] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<"confirm" | "processing" | "success">("confirm");
   const [orderDetails, setOrderDetails] = useState<{ orderId: string; plan: typeof plans[0] } | null>(null);
 
   const customerCode = searchParams.get("customer") || "";
@@ -31,85 +33,57 @@ const PlanSelection: React.FC = () => {
   const customerMobile = searchParams.get("mobile") || "";
   const customerName = searchParams.get("name") || "";
 
-  // Load Razorpay SDK
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, []);
-
-  const handlePayment = async () => {
+  const handlePayment = () => {
     if (!selectedPlan) return;
+    setShowPaymentDialog(true);
+    setPaymentStep("confirm");
+  };
+
+  const processPayment = async () => {
     const plan = plans.find((p) => p.id === selectedPlan)!;
-    setProcessing(true);
+    setPaymentStep("processing");
 
-    if (!window.Razorpay) {
-      toast({ title: "Payment SDK not loaded", description: "Please wait a moment and try again.", variant: "destructive" });
+    // Simulate payment processing delay
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    try {
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + (plan.duration.includes("12") ? 12 : 6));
+
+      const simulatedTxnId = "DEMO_" + Date.now().toString(36).toUpperCase();
+
+      const { data, error } = await supabase
+        .from("subscriptions")
+        .insert({
+          customer_code: customerCode || "GUEST",
+          customer_name: customerName || "Guest Customer",
+          customer_mobile: customerMobile || null,
+          dealer_code: dealerCode,
+          plan_id: plan.id,
+          plan_name: plan.name,
+          plan_price: plan.price,
+          payment_status: "SUCCESS",
+          payment_transaction_id: simulatedTxnId,
+          order_id: "",
+          subscription_end_date: endDate.toISOString().split("T")[0],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setPaymentStep("success");
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setShowPaymentDialog(false);
+      setOrderDetails({ orderId: data.order_id, plan });
+      setPaymentDone(true);
+      toast({ title: "Payment Successful!", description: "Your subscription is now active." });
+    } catch (err: any) {
+      setShowPaymentDialog(false);
+      toast({ title: "Error saving subscription", description: err.message, variant: "destructive" });
+    } finally {
       setProcessing(false);
-      return;
     }
-
-    const options = {
-      key: RAZORPAY_KEY,
-      amount: plan.price * 100, // Razorpay expects paise
-      currency: "INR",
-      name: "BKT Crossroads TAAS",
-      description: plan.name,
-      prefill: {
-        name: customerName,
-        contact: customerMobile,
-      },
-      theme: { color: "#F7941D" },
-      handler: async (response: any) => {
-        // Payment successful — save to DB
-        try {
-          const endDate = new Date();
-          endDate.setMonth(endDate.getMonth() + (plan.duration.includes("12") ? 12 : 6));
-
-          const { data, error } = await supabase
-            .from("subscriptions")
-            .insert({
-              customer_code: customerCode || "GUEST",
-              customer_name: customerName || "Guest Customer",
-              customer_mobile: customerMobile || null,
-              dealer_code: dealerCode,
-              plan_id: plan.id,
-              plan_name: plan.name,
-              plan_price: plan.price,
-              payment_status: "SUCCESS",
-              payment_transaction_id: response.razorpay_payment_id || null,
-              order_id: "", // auto-generated by trigger
-              subscription_end_date: endDate.toISOString().split("T")[0],
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-          setOrderDetails({ orderId: data.order_id, plan });
-          setPaymentDone(true);
-          toast({ title: "Payment Successful!", description: "Your subscription is now active." });
-        } catch (err: any) {
-          toast({ title: "Error saving subscription", description: err.message, variant: "destructive" });
-        } finally {
-          setProcessing(false);
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          setProcessing(false);
-          toast({ title: "Payment Cancelled", description: "You cancelled the payment." });
-        },
-      },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.on("payment.failed", (response: any) => {
-      setProcessing(false);
-      toast({ title: "Payment Failed", description: response.error?.description || "Please try again.", variant: "destructive" });
-    });
-    rzp.open();
   };
 
   if (paymentDone && orderDetails) {
@@ -138,6 +112,8 @@ const PlanSelection: React.FC = () => {
       </div>
     );
   }
+
+  const currentPlan = plans.find((p) => p.id === selectedPlan);
 
   return (
     <div className="min-h-[calc(100vh-56px)] bg-background">
@@ -204,10 +180,52 @@ const PlanSelection: React.FC = () => {
               <CreditCard size={18} />
               {processing ? "Processing..." : `Pay ₹${plans.find((p) => p.id === selectedPlan)?.price} Now`}
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">Powered by Razorpay · Secure Payment</p>
+            <p className="text-xs text-muted-foreground mt-2">Demo Payment · Simulated Flow</p>
           </motion.div>
         )}
       </div>
+
+      {/* Simulated Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={(open) => { if (!open && paymentStep === "confirm") setShowPaymentDialog(false); }}>
+        <DialogContent className="sm:max-w-md">
+          {paymentStep === "confirm" && currentPlan && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Confirm Payment</DialogTitle>
+                <DialogDescription>Review your order before proceeding</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-semibold">{currentPlan.name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span className="font-semibold">{currentPlan.duration}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Customer</span><span className="font-semibold">{customerName || "Guest"}</span></div>
+                  <div className="border-t pt-2 flex justify-between font-bold text-base"><span>Total</span><span>₹{currentPlan.price}</span></div>
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Cancel</Button>
+                <Button onClick={processPayment} className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+                  <CreditCard size={16} /> Pay ₹{currentPlan.price}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+          {paymentStep === "processing" && (
+            <div className="py-12 text-center space-y-4">
+              <Loader2 size={48} className="mx-auto animate-spin text-accent" />
+              <p className="font-semibold text-lg">Processing Payment...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we confirm your payment</p>
+            </div>
+          )}
+          {paymentStep === "success" && (
+            <div className="py-12 text-center space-y-4">
+              <CheckCircle size={48} className="mx-auto text-success" />
+              <p className="font-semibold text-lg">Payment Successful!</p>
+              <p className="text-sm text-muted-foreground">Activating your subscription...</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
