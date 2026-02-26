@@ -12,6 +12,7 @@ const AppHeader: React.FC = () => {
     { to: "/plans", label: "Plans", icon: LayoutDashboard },
     { to: "/dealer", label: "Dealer", icon: Users },
     { to: "/admin", label: "Admin", icon: Shield },
+    { to: "/customer-login", label: "Customer", icon: Users },
   ];
 
   return (
