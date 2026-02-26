@@ -11,8 +11,11 @@ import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut } from "lucide-react";
+import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, QrCode, Download, Copy, Check } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { QRCodeSVG } from "qrcode.react";
+import jsPDF from "jspdf";
+import bktLogoSrc from "@/assets/bkt-logo.png";
 
 const DealerDashboard: React.FC = () => {
   const { toast } = useToast();
@@ -30,6 +33,9 @@ const DealerDashboard: React.FC = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [dealerInfo, setDealerInfo] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  const registrationUrl = dealerCode ? `${window.location.origin}/?dealer=${dealerCode}` : "";
 
   useEffect(() => {
     if (user && userRole === 'dealer' && dealerCode) {
@@ -61,6 +67,85 @@ const DealerDashboard: React.FC = () => {
     if (dateTo && s.subscription_start_date > dateTo) return false;
     return true;
   });
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(registrationUrl);
+    setCopied(true);
+    toast({ title: "Link copied!" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadPDF = () => {
+    const svg = document.getElementById("dealer-qr-code");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = 400;
+      canvas.height = 400;
+      ctx?.drawImage(img, 0, 0, 400, 400);
+      const qrDataUrl = canvas.toDataURL("image/png");
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      logoImg.onload = () => {
+        const logoCanvas = document.createElement("canvas");
+        const logoCtx = logoCanvas.getContext("2d");
+        logoCanvas.width = logoImg.naturalWidth;
+        logoCanvas.height = logoImg.naturalHeight;
+        logoCtx?.drawImage(logoImg, 0, 0);
+        generatePDF(qrDataUrl, logoCanvas.toDataURL("image/png"));
+      };
+      logoImg.onerror = () => generatePDF(qrDataUrl, null);
+      logoImg.src = bktLogoSrc;
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const generatePDF = (qrDataUrl: string, logoDataUrl: string | null) => {
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = 210;
+    pdf.setFillColor(30, 100, 50);
+    pdf.rect(0, 0, pageW, 50, "F");
+    if (logoDataUrl) {
+      pdf.addImage(logoDataUrl, "PNG", (pageW - 60) / 2, 8, 60, 30);
+    } else {
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(28);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("BKT", pageW / 2, 30, { align: "center" });
+    }
+    pdf.setTextColor(180, 230, 50);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Tyre Service & Road Side Assistance Support", pageW / 2, 46, { align: "center" });
+    pdf.setTextColor(30, 100, 50);
+    pdf.setFontSize(32);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("SCAN TO REGISTER", pageW / 2, 75, { align: "center" });
+    pdf.setDrawColor(180, 230, 50);
+    pdf.setLineWidth(1);
+    pdf.line(40, 80, pageW - 40, 80);
+    const qrSize = 90;
+    pdf.addImage(qrDataUrl, "PNG", (pageW - qrSize) / 2, 90, qrSize, qrSize);
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Dealer Code: ${dealerCode}`, pageW / 2, 195, { align: "center" });
+    pdf.setFontSize(11);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("Scan the QR code above with your phone camera", pageW / 2, 210, { align: "center" });
+    pdf.text("to register for BKT Crossroads Tyre Assistance", pageW / 2, 217, { align: "center" });
+    pdf.setFillColor(30, 100, 50);
+    pdf.rect(0, 270, pageW, 27, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.text("BKT Crossroads – Tyre Assistance As A Service (TAAS)", pageW / 2, 282, { align: "center" });
+    pdf.text("www.bfrtyres.com | Powered by BKT", pageW / 2, 289, { align: "center" });
+    pdf.save(`BKT_QR_${dealerCode}.pdf`);
+    toast({ title: "PDF Downloaded!", description: "Print and place on your counter for customers to scan." });
+  };
 
   const handleSendOtp = async () => {
     setAuthError("");
@@ -285,6 +370,41 @@ const DealerDashboard: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+
+        {/* QR Code Section */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <QrCode size={18} className="text-accent" />
+              <CardTitle className="text-base">Your Registration QR Code</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-center p-6 bg-secondary rounded-lg">
+              <QRCodeSVG
+                id="dealer-qr-code"
+                value={registrationUrl}
+                size={200}
+                bgColor="transparent"
+                fgColor="hsl(var(--foreground))"
+                level="H"
+                includeMargin
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Registration Link</Label>
+              <div className="flex gap-2">
+                <Input value={registrationUrl} readOnly className="text-xs" />
+                <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                </Button>
+              </div>
+            </div>
+            <Button onClick={handleDownloadPDF} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+              <Download size={16} className="mr-2" /> Download QR (PDF)
+            </Button>
           </CardContent>
         </Card>
       </div>

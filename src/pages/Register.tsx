@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
 
-const steps = ["Register / Login", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+const steps = ["Register", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -201,7 +201,7 @@ const Register: React.FC = () => {
                           <Input id="otp" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter 4-digit OTP" maxLength={4} className="text-center text-lg tracking-widest" />
                         </div>
                         <Button onClick={verifyOtp} disabled={registering} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                          {registering ? "Registering..." : "Register / Login"}
+                          {registering ? "Registering..." : "Register"}
                         </Button>
                         <button onClick={sendOtp} className="text-sm text-muted-foreground hover:text-foreground w-full text-center">
                           Resend OTP
