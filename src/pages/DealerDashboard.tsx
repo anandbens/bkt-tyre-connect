@@ -11,7 +11,7 @@ import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, QrCode, Download, Copy, Check, IndianRupee, Clock } from "lucide-react";
+import { Users, TrendingUp, ShieldCheck, Phone, ArrowRight, LogOut, QrCode, Download, Copy, Check, IndianRupee, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { QRCodeSVG } from "qrcode.react";
 import jsPDF from "jspdf";
@@ -19,6 +19,7 @@ import bktLogoSrc from "@/assets/bkt-logo.png";
 
 // Commission rate (10% of plan price)
 const COMMISSION_RATE = 0.10;
+const PAGE_SIZE = 10;
 
 const getDateRange = (period: string): { from: string; to: string } => {
   const now = new Date();
@@ -66,6 +67,7 @@ const DealerDashboard: React.FC = () => {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [dealerInfo, setDealerInfo] = useState<any>(null);
   const [copied, setCopied] = useState(false);
+  const [subPage, setSubPage] = useState(1);
 
   const registrationUrl = dealerCode ? `${window.location.origin}/?dealer=${dealerCode}` : "";
 
@@ -123,6 +125,45 @@ const DealerDashboard: React.FC = () => {
       return true;
     });
   }, [subscriptions, filterPlan, searchCustomer, dateFrom, dateTo]);
+
+  // Reset pagination when filters change
+  useEffect(() => { setSubPage(1); }, [filterPlan, searchCustomer, dateFrom, dateTo, timePeriod]);
+
+  const paginate = <T,>(data: T[], page: number) => {
+    const start = (page - 1) * PAGE_SIZE;
+    return data.slice(start, start + PAGE_SIZE);
+  };
+  const totalPages = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const PaginationControls = ({ page, setPage, total }: { page: number; setPage: (p: number) => void; total: number }) => {
+    const tp = totalPages(total);
+    if (tp <= 1) return null;
+    return (
+      <div className="flex items-center justify-between pt-4 px-1">
+        <span className="text-xs text-muted-foreground">
+          Showing {Math.min((page - 1) * PAGE_SIZE + 1, total)}–{Math.min(page * PAGE_SIZE, total)} of {total}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+            <ChevronLeft size={16} />
+          </Button>
+          {Array.from({ length: tp }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === tp || Math.abs(p - page) <= 1)
+            .map((p, idx, arr) => (
+              <React.Fragment key={p}>
+                {idx > 0 && arr[idx - 1] !== p - 1 && <span className="text-xs text-muted-foreground px-1">…</span>}
+                <Button variant={p === page ? "default" : "outline"} size="icon" className="h-8 w-8 text-xs" onClick={() => setPage(p)}>
+                  {p}
+                </Button>
+              </React.Fragment>
+            ))}
+          <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= tp} onClick={() => setPage(page + 1)}>
+            <ChevronRight size={16} />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const conversionRate = customers.length > 0 ? Math.round((subscriptions.length / customers.length) * 100) : 0;
 
@@ -451,7 +492,7 @@ const DealerDashboard: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubs.map((sub) => (
+                {paginate(filteredSubs, subPage).map((sub) => (
                   <TableRow key={sub.order_id}>
                     <TableCell>
                       <div className="font-medium">{sub.customer_name}</div>
@@ -472,6 +513,7 @@ const DealerDashboard: React.FC = () => {
                 )}
               </TableBody>
             </Table>
+            <PaginationControls page={subPage} setPage={setSubPage} total={filteredSubs.length} />
           </CardContent>
         </Card>
 

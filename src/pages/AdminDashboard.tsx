@@ -213,24 +213,53 @@ const AdminDashboard: React.FC = () => {
       }
 
       const header = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/"/g, ""));
-      const codeIdx = header.findIndex((h) => h.includes("dealer") && h.includes("code"));
-      const statusIdx = header.findIndex((h) => h.includes("status"));
+      const findCol = (keywords: string[]) => header.findIndex((h) => keywords.every((k) => h.includes(k)));
 
-      if (codeIdx === -1 || statusIdx === -1) {
-        toast({ title: "Invalid CSV format", description: "CSV must have 'Dealer Code' and 'Status' columns.", variant: "destructive" });
+      const codeIdx = findCol(["dealer", "code"]);
+      if (codeIdx === -1) {
+        toast({ title: "Invalid CSV format", description: "CSV must have a 'Dealer Code' column.", variant: "destructive" });
         setImporting(false);
         return;
       }
+
+      const nameIdx = findCol(["dealer", "name"]);
+      const mobileIdx = findCol(["mobile"]);
+      const emailIdx = findCol(["email"]);
+      const channelIdx = findCol(["channel"]);
+      const cityIdx = findCol(["city"]);
+      const stateIdx = findCol(["state"]);
+      const addr1Idx = findCol(["address", "1"]);
+      const addr2Idx = findCol(["address", "2"]);
+      const pincodeIdx = findCol(["pincode"]);
+      const gstinIdx = findCol(["gstin"]);
+      const statusIdx = findCol(["status"]);
 
       let added = 0, updated = 0, errors = 0;
 
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",").map((c) => c.trim().replace(/"/g, ""));
         const dealerCode = cols[codeIdx]?.toUpperCase();
-        const status = cols[statusIdx]?.toUpperCase();
+        if (!dealerCode) { errors++; continue; }
 
-        if (!dealerCode || !status) { errors++; continue; }
-        if (status !== "ACTIVE" && status !== "INACTIVE") { errors++; continue; }
+        const getValue = (idx: number) => idx >= 0 && cols[idx] ? cols[idx] : undefined;
+        const status = getValue(statusIdx)?.toUpperCase();
+        if (status && status !== "ACTIVE" && status !== "INACTIVE") { errors++; continue; }
+
+        const fields: Record<string, string | undefined> = {
+          dealer_name: getValue(nameIdx),
+          dealer_mobile_number: getValue(mobileIdx),
+          dealer_email: getValue(emailIdx),
+          dealer_channel_type: getValue(channelIdx),
+          dealer_city: getValue(cityIdx),
+          dealer_state: getValue(stateIdx),
+          dealer_address_line1: getValue(addr1Idx),
+          dealer_address_line2: getValue(addr2Idx),
+          dealer_pincode: getValue(pincodeIdx),
+          dealer_gstin: getValue(gstinIdx),
+          dealer_status: status,
+        };
+        // Remove undefined values
+        const cleanFields = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined));
 
         const { data: existing } = await supabase
           .from("dealers")
@@ -239,20 +268,18 @@ const AdminDashboard: React.FC = () => {
           .maybeSingle();
 
         if (existing) {
-          await supabase
-            .from("dealers")
-            .update({ dealer_status: status })
-            .eq("dealer_code", dealerCode);
+          if (Object.keys(cleanFields).length > 0) {
+            await supabase.from("dealers").update(cleanFields).eq("dealer_code", dealerCode);
+          }
           updated++;
         } else {
-          await supabase
-            .from("dealers")
-            .insert({
-              dealer_code: dealerCode,
-              dealer_name: dealerCode,
-              dealer_mobile_number: "0000000000",
-              dealer_status: status,
-            });
+          await supabase.from("dealers").insert({
+            dealer_code: dealerCode,
+            dealer_name: cleanFields.dealer_name || dealerCode,
+            dealer_mobile_number: cleanFields.dealer_mobile_number || "0000000000",
+            dealer_status: cleanFields.dealer_status || "ACTIVE",
+            ...cleanFields,
+          });
           added++;
         }
       }
@@ -271,7 +298,10 @@ const AdminDashboard: React.FC = () => {
   };
 
   const downloadCSVTemplate = () => {
-    const csv = "Dealer Code,Status\nDLR00001,ACTIVE\nDLR00002,INACTIVE\n";
+    const headers = "Dealer Code,Dealer Name,Mobile Number,Email,Channel Type,City,State,Address Line 1,Address Line 2,Pincode,GSTIN,Status";
+    const row1 = "DLR00001,ABC Tyres,9876543210,abc@example.com,Authorized BKT Dealer,Mumbai,Maharashtra,Shop 12 Market Road,,400001,27AABCU9603R1ZM,ACTIVE";
+    const row2 = "DLR00002,XYZ Motors,9123456780,xyz@example.com,Multi-brand Dealer,Delhi,Delhi,45 Ring Road,Near Metro Station,110001,07AABCU9603R1ZN,INACTIVE";
+    const csv = [headers, row1, row2].join("\n") + "\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
