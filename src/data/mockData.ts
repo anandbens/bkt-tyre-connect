@@ -39,55 +39,88 @@ export interface Subscription {
   order_timestamp: string;
 }
 
+export interface PlanBenefit {
+  name: string;
+  icon: string;
+  included: boolean;
+}
+
 export interface Plan {
   id: string;
   name: string;
   price: number;
+  priceLabel: string;
   duration: string;
+  validity: string;
+  totalServices: number;
   features: string[];
+  benefits: PlanBenefit[];
   recommended?: boolean;
 }
+
+const benefitSet = (towing: boolean, hotel: boolean, cab: boolean, ambulance: boolean, legal: boolean): PlanBenefit[] => [
+  { name: "Towing", icon: "🚜", included: towing },
+  { name: "Hotel", icon: "🏨", included: hotel },
+  { name: "Cab Facility", icon: "🚕", included: cab },
+  { name: "Ambulance", icon: "🚑", included: ambulance },
+  { name: "Legal Assistance", icon: "📞", included: legal },
+];
 
 export const plans: Plan[] = [
   {
     id: "PLAN_SILVER",
     name: "Silver Assistance Plan",
-    price: 799,
-    duration: "6 Months",
+    price: 93,
+    priceLabel: "₹93 incl. GST",
+    duration: "2 Years",
+    validity: "2 Years",
+    totalServices: 3,
     features: [
-      "24/7 Roadside Assistance",
-      "Tyre Inspection (1 per quarter)",
-      "Priority Service at BKT Dealers",
-      "SMS Alerts & Reminders",
+      "3 Roadside Assistance Services",
+      "2 Year Validity",
+      "Towing Service",
+      "Ambulance Support",
+      "Legal Assistance",
     ],
+    benefits: benefitSet(true, false, false, true, true),
   },
   {
     id: "PLAN_GOLD",
     name: "Gold Assistance Plan",
-    price: 1499,
-    duration: "12 Months",
+    price: 123,
+    priceLabel: "₹123 incl. GST",
+    duration: "2 Years",
+    validity: "2 Years",
+    totalServices: 3,
     features: [
-      "All Silver Benefits",
-      "Tyre Inspection (1 per month)",
-      "Free Tyre Rotation (2 per year)",
-      "Extended Warranty Support",
-      "Dedicated Support Line",
+      "3 Roadside Assistance Services",
+      "2 Year Validity",
+      "Towing Service",
+      "Ambulance Support",
+      "Cab Facility",
+      "Legal Assistance",
     ],
+    benefits: benefitSet(true, false, true, true, true),
     recommended: true,
   },
   {
     id: "PLAN_PLATINUM",
     name: "Platinum Assistance Plan",
-    price: 2499,
-    duration: "12 Months",
+    price: 152,
+    priceLabel: "₹152 incl. GST",
+    duration: "2 Years",
+    validity: "2 Years",
+    totalServices: 3,
     features: [
-      "All Gold Benefits",
-      "Unlimited Tyre Inspections",
-      "Free Tyre Rotation (4 per year)",
-      "On-site Emergency Service",
-      "Complimentary Vehicle Health Check",
-      "VIP Priority Access",
+      "3 Roadside Assistance Services",
+      "2 Year Validity",
+      "Towing Service",
+      "Hotel Accommodation",
+      "Cab Facility",
+      "Ambulance Support",
+      "Legal Assistance",
     ],
+    benefits: benefitSet(true, true, true, true, true),
   },
 ];
 
