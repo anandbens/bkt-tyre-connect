@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -11,18 +11,19 @@ import StatCard from "@/components/StatCard";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, ShieldCheck, TrendingUp, Store, Phone, ArrowRight, Download, ChevronLeft, ChevronRight, Upload, LogOut } from "lucide-react";
+import { Users, ShieldCheck, TrendingUp, Store, ArrowRight, Download, ChevronLeft, ChevronRight, Upload, LogOut, QrCode, Copy, Check, AlertCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
+import { QRCodeSVG } from "qrcode.react";
+import jsPDF from "jspdf";
+import bktLogoSrc from "@/assets/bkt-logo.png";
 
 const PAGE_SIZE = 10;
 
 const AdminDashboard: React.FC = () => {
   const { toast } = useToast();
-  const { user, loading: authLoading, userRole, signIn, signUp, signOut } = useAuth();
+  const { user, loading: authLoading, userRole, signIn, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  
   const [authError, setAuthError] = useState("");
 
   const [filterPlan, setFilterPlan] = useState("all");
@@ -41,6 +42,15 @@ const AdminDashboard: React.FC = () => {
 
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // QR Code state
+  const [qrDealerCode, setQrDealerCode] = useState("");
+  const [qrCopied, setQrCopied] = useState(false);
+  const [qrValidated, setQrValidated] = useState(false);
+  const [qrValidating, setQrValidating] = useState(false);
+  const [qrError, setQrError] = useState("");
+
+  const qrRegistrationUrl = `${window.location.origin}/?dealer=${qrDealerCode}`;
 
   useEffect(() => {
     if (user && userRole === 'admin') fetchData();
@@ -184,7 +194,6 @@ const AdminDashboard: React.FC = () => {
     toast({ title: "Exported!", description: `${rows.length} records exported to CSV.` });
   };
 
-  // CSV Dealer Import
   const handleDealerCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -223,7 +232,6 @@ const AdminDashboard: React.FC = () => {
         if (!dealerCode || !status) { errors++; continue; }
         if (status !== "ACTIVE" && status !== "INACTIVE") { errors++; continue; }
 
-        // Check if dealer exists
         const { data: existing } = await supabase
           .from("dealers")
           .select("dealer_code")
@@ -231,20 +239,18 @@ const AdminDashboard: React.FC = () => {
           .maybeSingle();
 
         if (existing) {
-          // Update status
           await supabase
             .from("dealers")
             .update({ dealer_status: status })
             .eq("dealer_code", dealerCode);
           updated++;
         } else {
-          // Insert new dealer with minimal info
           await supabase
             .from("dealers")
             .insert({
               dealer_code: dealerCode,
-              dealer_name: dealerCode, // placeholder
-              dealer_mobile_number: "0000000000", // placeholder
+              dealer_name: dealerCode,
+              dealer_mobile_number: "0000000000",
               dealer_status: status,
             });
           added++;
@@ -273,6 +279,133 @@ const AdminDashboard: React.FC = () => {
     link.click();
   };
 
+  // QR Code functions
+  const validateQrDealerCode = async () => {
+    if (!qrDealerCode.trim()) {
+      setQrError("Please enter a dealer code.");
+      return;
+    }
+    setQrValidating(true);
+    setQrError("");
+    try {
+      const { data, error: dbError } = await supabase
+        .from("dealers")
+        .select("dealer_code, dealer_status")
+        .eq("dealer_code", qrDealerCode.toUpperCase())
+        .maybeSingle();
+
+      if (dbError) throw dbError;
+
+      if (!data) {
+        setQrError("Dealer code not found in the system.");
+        setQrValidated(false);
+      } else if (data.dealer_status !== "ACTIVE") {
+        setQrError("This dealer code is inactive. Contact admin.");
+        setQrValidated(false);
+      } else {
+        setQrValidated(true);
+        toast({ title: "Dealer Verified!", description: "You can now generate and download the QR code." });
+      }
+    } catch (err: any) {
+      setQrError(err.message);
+    } finally {
+      setQrValidating(false);
+    }
+  };
+
+  const handleQrCopy = () => {
+    navigator.clipboard.writeText(qrRegistrationUrl);
+    setQrCopied(true);
+    toast({ title: "Link copied!" });
+    setTimeout(() => setQrCopied(false), 2000);
+  };
+
+  const handleQrDownloadPDF = () => {
+    const svg = document.getElementById("admin-dealer-qr-code");
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = 400;
+      canvas.height = 400;
+      ctx?.drawImage(img, 0, 0, 400, 400);
+      const qrDataUrl = canvas.toDataURL("image/png");
+
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      logoImg.onload = () => {
+        const logoCanvas = document.createElement("canvas");
+        const logoCtx = logoCanvas.getContext("2d");
+        logoCanvas.width = logoImg.naturalWidth;
+        logoCanvas.height = logoImg.naturalHeight;
+        logoCtx?.drawImage(logoImg, 0, 0);
+        const logoDataUrl = logoCanvas.toDataURL("image/png");
+        generateQrPDF(qrDataUrl, logoDataUrl);
+      };
+      logoImg.onerror = () => generateQrPDF(qrDataUrl, null);
+      logoImg.src = bktLogoSrc;
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const generateQrPDF = (qrDataUrl: string, logoDataUrl: string | null) => {
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = 210;
+
+    pdf.setFillColor(30, 100, 50);
+    pdf.rect(0, 0, pageW, 50, "F");
+
+    if (logoDataUrl) {
+      pdf.addImage(logoDataUrl, "PNG", (pageW - 60) / 2, 8, 60, 30);
+    } else {
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(28);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("BKT", pageW / 2, 30, { align: "center" });
+    }
+
+    pdf.setTextColor(180, 230, 50);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Tyre Service & Road Side Assistance Support", pageW / 2, 46, { align: "center" });
+
+    pdf.setTextColor(30, 100, 50);
+    pdf.setFontSize(32);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("SCAN TO REGISTER", pageW / 2, 75, { align: "center" });
+
+    pdf.setDrawColor(180, 230, 50);
+    pdf.setLineWidth(1);
+    pdf.line(40, 80, pageW - 40, 80);
+
+    const qrSize = 90;
+    pdf.addImage(qrDataUrl, "PNG", (pageW - qrSize) / 2, 90, qrSize, qrSize);
+
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Dealer Code: ${qrDealerCode}`, pageW / 2, 195, { align: "center" });
+
+    pdf.setFontSize(11);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("Scan the QR code above with your phone camera", pageW / 2, 210, { align: "center" });
+    pdf.text("to register for BKT Crossroads Tyre Assistance", pageW / 2, 217, { align: "center" });
+
+    pdf.setFillColor(30, 100, 50);
+    pdf.rect(0, 270, pageW, 27, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.text("BKT Crossroads – Tyre Assistance As A Service (TAAS)", pageW / 2, 282, { align: "center" });
+    pdf.text("www.bfrtyres.com | Powered by BKT", pageW / 2, 289, { align: "center" });
+
+    pdf.save(`BKT_QR_${qrDealerCode}.pdf`);
+    toast({ title: "PDF Downloaded!", description: "Print and place on counter for customers to scan." });
+  };
+
   const handleLogin = async () => {
     setAuthError("");
     if (!email || !password) {
@@ -286,8 +419,6 @@ const AdminDashboard: React.FC = () => {
     }
     toast({ title: "Welcome, Admin", description: "Admin dashboard loaded." });
   };
-
-  
 
   if (authLoading) {
     return (
@@ -411,6 +542,7 @@ const AdminDashboard: React.FC = () => {
               <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
               <TabsTrigger value="registrations">Registrations</TabsTrigger>
               <TabsTrigger value="dealers">Dealers</TabsTrigger>
+              <TabsTrigger value="qrcode" className="gap-1"><QrCode size={14} /> QR Code</TabsTrigger>
             </TabsList>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={exportToExcel} className="gap-2">
@@ -556,6 +688,73 @@ const AdminDashboard: React.FC = () => {
                   </TableBody>
                 </Table>
                 <PaginationControls page={dealerPage} setPage={setDealerPage} total={dealers.length} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* QR Code Tab */}
+          <TabsContent value="qrcode">
+            <Card className="shadow-card max-w-lg mx-auto">
+              <CardHeader className="text-center pb-2">
+                <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-3">
+                  <QrCode className="text-accent" size={24} />
+                </div>
+                <CardTitle className="text-lg">Dealer QR Code Generator</CardTitle>
+                <CardDescription>Enter a dealer code to generate their registration QR code.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label>Dealer Code</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={qrDealerCode}
+                      onChange={(e) => {
+                        setQrDealerCode(e.target.value.toUpperCase());
+                        setQrValidated(false);
+                        setQrError("");
+                      }}
+                      placeholder="Enter dealer code"
+                    />
+                    <Button onClick={validateQrDealerCode} disabled={qrValidating} className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0">
+                      {qrValidating ? "Checking..." : "Verify"}
+                    </Button>
+                  </div>
+                  {qrError && (
+                    <p className="text-sm text-destructive flex items-center gap-1 mt-1">
+                      <AlertCircle size={14} /> {qrError}
+                    </p>
+                  )}
+                </div>
+
+                {qrValidated && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+                    <div className="flex justify-center p-6 bg-secondary rounded-lg">
+                      <QRCodeSVG
+                        id="admin-dealer-qr-code"
+                        value={qrRegistrationUrl}
+                        size={220}
+                        bgColor="transparent"
+                        fgColor="hsl(var(--foreground))"
+                        level="H"
+                        includeMargin
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Registration Link</Label>
+                      <div className="flex gap-2">
+                        <Input value={qrRegistrationUrl} readOnly className="text-xs" />
+                        <Button variant="outline" size="icon" onClick={handleQrCopy}>
+                          {qrCopied ? <Check size={16} /> : <Copy size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Button onClick={handleQrDownloadPDF} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                      <Download size={16} className="mr-2" /> Download QR (PDF)
+                    </Button>
+                  </motion.div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
