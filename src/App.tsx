@@ -9,13 +9,6 @@ import PlanSelection from "@/pages/PlanSelection";
 import DealerDashboard from "@/pages/DealerDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import DealerQR from "@/pages/DealerQR";
-import CustomerLogin from "@/pages/CustomerLogin";
-import CustomerLayout from "@/pages/customer/CustomerLayout";
-import ProfilePage from "@/pages/customer/ProfilePage";
-import MembershipPage from "@/pages/customer/MembershipPage";
-import ReferralPage from "@/pages/customer/ReferralPage";
-import ComplaintsPage from "@/pages/customer/ComplaintsPage";
-import TransactionsPage from "@/pages/customer/TransactionsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,14 +26,6 @@ const App = () => (
           <Route path="/dealer" element={<DealerDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/qr" element={<DealerQR />} />
-          <Route path="/customer-login" element={<CustomerLogin />} />
-          <Route path="/customer" element={<CustomerLayout />}>
-            <Route path="dashboard" element={<ProfilePage />} />
-            <Route path="membership" element={<MembershipPage />} />
-            <Route path="referral" element={<ReferralPage />} />
-            <Route path="complaints" element={<ComplaintsPage />} />
-            <Route path="transactions" element={<TransactionsPage />} />
-          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

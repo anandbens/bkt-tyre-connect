@@ -116,43 +116,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Blood Group</Label>
-              <Input placeholder="e.g. O+" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Gender</Label>
-              <Select>
-                <SelectTrigger><SelectValue placeholder="Select Gender" /></SelectTrigger>
-                <SelectContent className="bg-white z-50">
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Father's Name</Label>
-              <Input placeholder="Father's name" />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Address Line 1</Label>
-              <Input placeholder="Address line 1" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Address Line 2</Label>
-              <Input placeholder="Address line 2" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Pin Code</Label>
-              <Input placeholder="Pin code" />
-            </div>
-          </div>
-
           <Button onClick={handleSave} disabled={saving} className="bg-accent text-accent-foreground hover:bg-accent/90">
             {saving ? "Saving..." : "Update Profile"}
           </Button>
