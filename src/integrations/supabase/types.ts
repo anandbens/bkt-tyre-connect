@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      complaints: {
+        Row: {
+          closed_at: string | null
+          complaint_number: string
+          created_at: string
+          customer_code: string
+          customer_mobile: string
+          description: string | null
+          fault_type: string
+          id: string
+          service_city: string | null
+          service_status: string
+          status: string
+          updated_at: string
+          vehicle_number: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          complaint_number: string
+          created_at?: string
+          customer_code: string
+          customer_mobile: string
+          description?: string | null
+          fault_type: string
+          id?: string
+          service_city?: string | null
+          service_status?: string
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          complaint_number?: string
+          created_at?: string
+          customer_code?: string
+          customer_mobile?: string
+          description?: string | null
+          fault_type?: string
+          id?: string
+          service_city?: string | null
+          service_status?: string
+          status?: string
+          updated_at?: string
+          vehicle_number?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           city: string
