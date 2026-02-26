@@ -64,7 +64,7 @@ const PlanSelection: React.FC = () => {
 
     try {
       const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + (plan.duration.includes("12") ? 12 : 6));
+      endDate.setFullYear(endDate.getFullYear() + 2);
       const simulatedTxnId = "PAY_" + Date.now().toString(36).toUpperCase();
 
       const { data, error } = await supabase
@@ -156,8 +156,9 @@ const PlanSelection: React.FC = () => {
                 )}
                 <CardHeader className="text-center pt-6">
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
-                  <CardDescription>{plan.duration}</CardDescription>
+                  <CardDescription>Validity: {plan.duration} · {plan.totalServices} Services</CardDescription>
                   <div className="text-3xl font-bold mt-2">₹{plan.price}</div>
+                  <div className="text-xs text-muted-foreground">incl. GST (Base: ₹{plan.priceBeforeGst})</div>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2.5">
