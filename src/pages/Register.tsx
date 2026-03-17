@@ -241,19 +241,6 @@ const Register: React.FC = () => {
         })
         .eq("customer_code", customerCode);
       if (error) throw error;
-
-  // Step 4: Save tyre purchase details & finish
-  const saveTyreDetails = async () => {
-    try {
-      const { error } = await supabase
-        .from("customers")
-        .update({
-          tyre_details: form.tyreDetails || null,
-          number_of_tyres: parseInt(form.numberOfTyres) || 1,
-          invoice_number: form.invoiceNumber || null,
-        })
-        .eq("customer_code", customerCode);
-      if (error) throw error;
       toast({ title: "Registration Complete!", description: "You can now select a subscription plan." });
       navigate(`/plans?customer=${customerCode}&dealer=${dealerCode}&mobile=${form.mobile}&name=${encodeURIComponent(form.name)}`);
     } catch (err: any) {
