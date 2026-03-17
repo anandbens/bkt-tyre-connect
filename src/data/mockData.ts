@@ -48,7 +48,6 @@ export interface Plan {
   id: string;
   name: string;
   price: number;
-  priceBeforeGst: number;
   duration: string;
   validity: string;
   totalServices: number;
