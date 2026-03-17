@@ -209,16 +209,41 @@ const PlanSelection: React.FC = () => {
         </div>
 
         {selectedPlan && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 text-center pb-8">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 text-center pb-8 space-y-4">
+            <div className="flex items-center justify-center gap-2">
+              <Checkbox
+                id="tc-check"
+                checked={tcAccepted}
+                onCheckedChange={(checked) => {
+                  if (!checked) {
+                    setTcAccepted(false);
+                  } else {
+                    setShowTcDialog(true);
+                    setTcScrolledToBottom(false);
+                  }
+                }}
+              />
+              <label htmlFor="tc-check" className="text-sm cursor-pointer">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setShowTcDialog(true); setTcScrolledToBottom(false); }}
+                  className="text-accent underline font-medium hover:text-accent/80"
+                >
+                  Terms & Conditions
+                </button>
+              </label>
+            </div>
             <Button
               size="lg"
               onClick={handlePayment}
-              className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-accent gap-2 px-8"
+              disabled={!tcAccepted}
+              className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-accent gap-2 px-8 disabled:opacity-50"
             >
               <CreditCard size={18} />
               {`Pay ₹${plans.find((p) => p.id === selectedPlan)?.price} Now`}
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">Secure Payment · Demo Mode</p>
+            <p className="text-xs text-muted-foreground">Secure Payment · Demo Mode</p>
           </motion.div>
         )}
       </div>
