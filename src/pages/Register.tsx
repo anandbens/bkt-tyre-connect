@@ -177,6 +177,11 @@ const Register: React.FC = () => {
       toast({ title: "Missing fields", description: "Name, State and City are mandatory.", variant: "destructive" });
       return;
     }
+    if (isNewUser) {
+      // Already saved during registration
+      setStep(2);
+      return;
+    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -200,6 +205,10 @@ const Register: React.FC = () => {
       toast({ title: "Missing field", description: "Vehicle number is mandatory.", variant: "destructive" });
       return;
     }
+    if (isNewUser) {
+      setStep(3);
+      return;
+    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -214,6 +223,24 @@ const Register: React.FC = () => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   };
+
+  // Step 4: Save tyre purchase details & finish
+  const saveTyreDetails = async () => {
+    if (isNewUser) {
+      toast({ title: "Registration Complete!", description: "You can now select a subscription plan." });
+      navigate(`/plans?customer=${customerCode}&dealer=${dealerCode}&mobile=${form.mobile}&name=${encodeURIComponent(form.name)}`);
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          tyre_details: form.tyreDetails || null,
+          number_of_tyres: parseInt(form.numberOfTyres) || 1,
+          invoice_number: form.invoiceNumber || null,
+        })
+        .eq("customer_code", customerCode);
+      if (error) throw error;
 
   // Step 4: Save tyre purchase details & finish
   const saveTyreDetails = async () => {
