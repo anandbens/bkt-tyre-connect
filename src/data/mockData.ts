@@ -76,8 +76,7 @@ export const plans: Plan[] = [
   {
     id: "PLAN_SILVER",
     name: "Silver Assistance Plan",
-    price: 93,
-    priceBeforeGst: 49,
+    price: 99,
     duration: "2 Years",
     validity: "2 Years",
     totalServices: 3,
