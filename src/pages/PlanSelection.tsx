@@ -143,8 +143,8 @@ const PlanSelection: React.FC = () => {
                 <div className="flex justify-between"><span className="text-muted-foreground">Validity</span><span className="font-semibold">{orderDetails.plan.duration}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge className="bg-success text-success-foreground">Active</Badge></div>
               </div>
-              <Button variant="outline" onClick={() => navigate("/")}>
-                Back to Home
+              <Button variant="outline" onClick={() => navigate("/customer-login")}>
+                Customer Login
               </Button>
             </CardContent>
           </Card>
