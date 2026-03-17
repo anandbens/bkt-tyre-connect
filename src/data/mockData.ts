@@ -110,8 +110,7 @@ export const plans: Plan[] = [
   {
     id: "PLAN_GOLD",
     name: "Gold Assistance Plan",
-    price: 123,
-    priceBeforeGst: 74,
+    price: 149,
     duration: "2 Years",
     validity: "2 Years",
     totalServices: 3,
