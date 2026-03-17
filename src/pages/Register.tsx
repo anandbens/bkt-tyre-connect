@@ -428,21 +428,21 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="tyreDetails">Tyre Details</Label>
-                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" />
+                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="numberOfTyres">Number of Tyres</Label>
-                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" />
+                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
-                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." />
+                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
                       <Button variant="outline" onClick={() => setStep(2)}>← Back</Button>
                       <Button onClick={saveTyreDetails} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                        Complete & Select Plan →
+                        Complete Plan Selection →
                       </Button>
                     </div>
                   </motion.div>
