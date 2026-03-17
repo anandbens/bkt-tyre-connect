@@ -11,22 +11,9 @@ import { CheckCircle, Truck, User, ShoppingBag, Phone, ExternalLink, FileText } 
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { getDummyCustomer } from "@/data/dummyCustomers";
 
 const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
-
-const DUMMY_FORM = {
-  name: "Rajesh Kumar",
-  email: "rajesh.kumar@example.com",
-  state: "Maharashtra",
-  city: "Pune",
-  vehicleNumber: "MH12AB1234",
-  vehicleMakeModel: "Tata Ace Gold",
-  tyreDetails: "BKT Agrimax RT657",
-  numberOfTyres: "4",
-  invoiceNumber: "INV-2026-00012",
-};
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -130,22 +117,23 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — insert with dummy data
+      // New customer — generate unique dummy data from mobile number
+      const dummy = getDummyCustomer(form.mobile);
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: DUMMY_FORM.name,
+          customer_name: dummy.name,
           customer_code: "",
           dealer_code: dealerCode,
-          city: DUMMY_FORM.city,
-          state: DUMMY_FORM.state,
-          email: DUMMY_FORM.email,
-          vehicle_number: DUMMY_FORM.vehicleNumber,
-          vehicle_make_model: DUMMY_FORM.vehicleMakeModel,
-          tyre_details: DUMMY_FORM.tyreDetails,
-          number_of_tyres: parseInt(DUMMY_FORM.numberOfTyres),
-          invoice_number: DUMMY_FORM.invoiceNumber,
+          city: dummy.city,
+          state: dummy.state,
+          email: dummy.email,
+          vehicle_number: dummy.vehicleNumber,
+          vehicle_make_model: dummy.vehicleMakeModel,
+          tyre_details: dummy.tyreDetails,
+          number_of_tyres: parseInt(dummy.numberOfTyres),
+          invoice_number: dummy.invoiceNumber,
         })
         .select()
         .single();
@@ -157,7 +145,7 @@ const Register: React.FC = () => {
       // Prefill form with dummy data
       setForm((prev) => ({
         ...prev,
-        ...DUMMY_FORM,
+        ...dummy,
       }));
 
       await supabase.from("referrals").insert({
