@@ -49,10 +49,26 @@ const PlanSelection: React.FC = () => {
 
   const handlePayment = () => {
     if (!selectedPlan) return;
+    if (!tcAccepted) {
+      toast({ title: "Terms & Conditions Required", description: "Please read and accept the Terms & Conditions before proceeding.", variant: "destructive" });
+      return;
+    }
     setShowPaymentDialog(true);
     setPaymentStep("methods");
     setSelectedMethod(null);
     setUpiId("");
+  };
+
+  const handleTcScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 30;
+    if (isAtBottom) setTcScrolledToBottom(true);
+  };
+
+  const handleTcAgree = () => {
+    setTcAccepted(true);
+    setShowTcDialog(false);
+    toast({ title: "Terms Accepted", description: "You have accepted the Terms & Conditions." });
   };
 
   const selectPaymentMethod = (methodId: string) => {
