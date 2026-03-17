@@ -37,6 +37,10 @@ const PlanSelection: React.FC = () => {
   const [upiId, setUpiId] = useState("");
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [orderDetails, setOrderDetails] = useState<{ orderId: string; plan: typeof plans[0] } | null>(null);
+  const [tcAccepted, setTcAccepted] = useState(false);
+  const [showTcDialog, setShowTcDialog] = useState(false);
+  const [tcScrolledToBottom, setTcScrolledToBottom] = useState(false);
+  const tcScrollRef = useRef<HTMLDivElement>(null);
 
   const customerCode = searchParams.get("customer") || "";
   const dealerCode = searchParams.get("dealer") || "DLR12345";
