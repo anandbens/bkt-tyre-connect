@@ -125,22 +125,35 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — insert
+      // New customer — insert with dummy data
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: form.mobile,
+          customer_name: DUMMY_FORM.name,
           customer_code: "",
           dealer_code: dealerCode,
-          city: "—",
-          vehicle_number: "—",
+          city: DUMMY_FORM.city,
+          state: DUMMY_FORM.state,
+          email: DUMMY_FORM.email,
+          vehicle_number: DUMMY_FORM.vehicleNumber,
+          vehicle_make_model: DUMMY_FORM.vehicleMakeModel,
+          tyre_details: DUMMY_FORM.tyreDetails,
+          number_of_tyres: parseInt(DUMMY_FORM.numberOfTyres),
+          invoice_number: DUMMY_FORM.invoiceNumber,
         })
         .select()
         .single();
 
       if (error) throw error;
       setCustomerCode(data.customer_code);
+      setIsNewUser(true);
+
+      // Prefill form with dummy data
+      setForm((prev) => ({
+        ...prev,
+        ...DUMMY_FORM,
+      }));
 
       await supabase.from("referrals").insert({
         customer_code: data.customer_code,
@@ -148,7 +161,7 @@ const Register: React.FC = () => {
         referral_source: "Dealer QR",
       });
 
-      toast({ title: "OTP Verified!", description: "You are now registered. Please complete your profile." });
+      toast({ title: "OTP Verified!", description: "You are now registered. Please review your details and select a plan." });
       setStep(1);
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
