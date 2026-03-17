@@ -12,7 +12,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
 
-const steps = ["Register", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+
+const DUMMY_FORM = {
+  name: "Rajesh Kumar",
+  email: "rajesh.kumar@example.com",
+  state: "Maharashtra",
+  city: "Pune",
+  vehicleNumber: "MH12AB1234",
+  vehicleMakeModel: "Tata Ace Gold",
+  tyreDetails: "BKT Agrimax RT657",
+  numberOfTyres: "4",
+  invoiceNumber: "INV-2026-00012",
+};
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
