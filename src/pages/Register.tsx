@@ -403,11 +403,11 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleNumber">Vehicle Number *</Label>
-                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" />
+                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleMakeModel">Make & Model</Label>
-                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" />
+                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
