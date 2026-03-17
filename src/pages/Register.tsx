@@ -12,7 +12,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
 
-const steps = ["Register", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
+
+const DUMMY_FORM = {
+  name: "Rajesh Kumar",
+  email: "rajesh.kumar@example.com",
+  state: "Maharashtra",
+  city: "Pune",
+  vehicleNumber: "MH12AB1234",
+  vehicleMakeModel: "Tata Ace Gold",
+  tyreDetails: "BKT Agrimax RT657",
+  numberOfTyres: "4",
+  invoiceNumber: "INV-2026-00012",
+};
 
 const Register: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -27,6 +39,7 @@ const Register: React.FC = () => {
   const [customerCode, setCustomerCode] = useState("");
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<any>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [form, setForm] = useState({
     mobile: "",
     name: "",
@@ -112,22 +125,35 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — insert
+      // New customer — insert with dummy data
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: form.mobile,
+          customer_name: DUMMY_FORM.name,
           customer_code: "",
           dealer_code: dealerCode,
-          city: "—",
-          vehicle_number: "—",
+          city: DUMMY_FORM.city,
+          state: DUMMY_FORM.state,
+          email: DUMMY_FORM.email,
+          vehicle_number: DUMMY_FORM.vehicleNumber,
+          vehicle_make_model: DUMMY_FORM.vehicleMakeModel,
+          tyre_details: DUMMY_FORM.tyreDetails,
+          number_of_tyres: parseInt(DUMMY_FORM.numberOfTyres),
+          invoice_number: DUMMY_FORM.invoiceNumber,
         })
         .select()
         .single();
 
       if (error) throw error;
       setCustomerCode(data.customer_code);
+      setIsNewUser(true);
+
+      // Prefill form with dummy data
+      setForm((prev) => ({
+        ...prev,
+        ...DUMMY_FORM,
+      }));
 
       await supabase.from("referrals").insert({
         customer_code: data.customer_code,
@@ -135,7 +161,7 @@ const Register: React.FC = () => {
         referral_source: "Dealer QR",
       });
 
-      toast({ title: "OTP Verified!", description: "You are now registered. Please complete your profile." });
+      toast({ title: "OTP Verified!", description: "You are now registered. Please review your details and select a plan." });
       setStep(1);
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
@@ -149,6 +175,11 @@ const Register: React.FC = () => {
   const savePersonalDetails = async () => {
     if (!form.name || !form.state || !form.city) {
       toast({ title: "Missing fields", description: "Name, State and City are mandatory.", variant: "destructive" });
+      return;
+    }
+    if (isNewUser) {
+      // Already saved during registration
+      setStep(2);
       return;
     }
     try {
@@ -174,6 +205,10 @@ const Register: React.FC = () => {
       toast({ title: "Missing field", description: "Vehicle number is mandatory.", variant: "destructive" });
       return;
     }
+    if (isNewUser) {
+      setStep(3);
+      return;
+    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -191,6 +226,11 @@ const Register: React.FC = () => {
 
   // Step 4: Save tyre purchase details & finish
   const saveTyreDetails = async () => {
+    if (isNewUser) {
+      toast({ title: "Registration Complete!", description: "You can now select a subscription plan." });
+      navigate(`/plans?customer=${customerCode}&dealer=${dealerCode}&mobile=${form.mobile}&name=${encodeURIComponent(form.name)}`);
+      return;
+    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -312,15 +352,15 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="name">Full Name *</Label>
-                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" />
+                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="email">Email (Optional)</Label>
-                        <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" />
+                        <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="state">State *</Label>
-                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }}>
+                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }} disabled={isNewUser}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select State" />
                           </SelectTrigger>
@@ -333,7 +373,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="city">City *</Label>
-                        <Select value={form.city} onValueChange={(val) => updateField("city", val)} disabled={!form.state}>
+                        <Select value={form.city} onValueChange={(val) => updateField("city", val)} disabled={!form.state || isNewUser}>
                           <SelectTrigger>
                             <SelectValue placeholder={form.state ? "Select City" : "Select state first"} />
                           </SelectTrigger>
@@ -363,11 +403,11 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleNumber">Vehicle Number *</Label>
-                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" />
+                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleMakeModel">Make & Model</Label>
-                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" />
+                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
@@ -388,21 +428,21 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="tyreDetails">Tyre Details</Label>
-                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" />
+                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="numberOfTyres">Number of Tyres</Label>
-                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" />
+                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
-                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." />
+                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
                       <Button variant="outline" onClick={() => setStep(2)}>← Back</Button>
                       <Button onClick={saveTyreDetails} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                        Complete & Select Plan →
+                        Complete Plan Selection →
                       </Button>
                     </div>
                   </motion.div>
