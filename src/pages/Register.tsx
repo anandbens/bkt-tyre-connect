@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import StepIndicator from "@/components/StepIndicator";
-import { CheckCircle, Truck, User, ShoppingBag, Phone, ExternalLink } from "lucide-react";
+import { CheckCircle, Truck, User, ShoppingBag, Phone, ExternalLink, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
@@ -40,6 +42,9 @@ const Register: React.FC = () => {
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<any>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [tcAccepted, setTcAccepted] = useState(false);
+  const [showTcDialog, setShowTcDialog] = useState(false);
+  const [tcScrolledToBottom, setTcScrolledToBottom] = useState(false);
   const [form, setForm] = useState({
     mobile: "",
     name: "",
