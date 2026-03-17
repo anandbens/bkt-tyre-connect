@@ -21,8 +21,7 @@ const AppHeader: React.FC = () => {
         <Link to="/" className="flex items-center gap-3">
           <img src={bktLogo} alt="BKT Logo" className="h-10 w-auto" />
           <div>
-            <div className="font-bold text-sm tracking-wide text-primary">Crossroads TAAS</div>
-            <div className="text-xs text-muted-foreground">Tyre Assistance & Service</div>
+            <div className="font-bold text-sm tracking-wide text-primary">BKT You Forward</div>
           </div>
         </Link>
 

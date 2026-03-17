@@ -48,7 +48,6 @@ export interface Plan {
   id: string;
   name: string;
   price: number;
-  priceBeforeGst: number;
   duration: string;
   validity: string;
   totalServices: number;
@@ -76,8 +75,7 @@ export const plans: Plan[] = [
   {
     id: "PLAN_SILVER",
     name: "Silver Assistance Plan",
-    price: 93,
-    priceBeforeGst: 49,
+    price: 99,
     duration: "2 Years",
     validity: "2 Years",
     totalServices: 3,
@@ -111,8 +109,7 @@ export const plans: Plan[] = [
   {
     id: "PLAN_GOLD",
     name: "Gold Assistance Plan",
-    price: 123,
-    priceBeforeGst: 74,
+    price: 149,
     duration: "2 Years",
     validity: "2 Years",
     totalServices: 3,
@@ -148,8 +145,7 @@ export const plans: Plan[] = [
   {
     id: "PLAN_PLATINUM",
     name: "Platinum Assistance Plan",
-    price: 152,
-    priceBeforeGst: 99,
+    price: 199,
     duration: "2 Years",
     validity: "2 Years",
     totalServices: 3,

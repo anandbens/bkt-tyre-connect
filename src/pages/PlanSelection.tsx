@@ -183,7 +183,7 @@ const PlanSelection: React.FC = () => {
                   <CardTitle className="text-lg">{plan.name}</CardTitle>
                   <CardDescription>Validity: {plan.duration} · {plan.totalServices} Services</CardDescription>
                   <div className="text-3xl font-bold mt-2">₹{plan.price}</div>
-                  <div className="text-xs text-muted-foreground">incl. GST (Base: ₹{plan.priceBeforeGst})</div>
+                  <div className="text-xs text-muted-foreground">incl. GST</div>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2.5">
