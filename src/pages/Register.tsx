@@ -287,7 +287,7 @@ const Register: React.FC = () => {
         <div className="container mx-auto max-w-2xl text-center">
           <h1 className="text-xl sm:text-2xl font-bold mb-1">TAAS Customer Registration</h1>
           <p className="text-xs sm:text-sm opacity-80">
-            Register for BKT Crossroads Tyre Assistance & Service
+            Register for BKT You Forward - Journey Assistance Program
           </p>
         </div>
       </div>

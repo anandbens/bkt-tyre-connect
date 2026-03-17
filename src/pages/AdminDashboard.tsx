@@ -423,7 +423,7 @@ const AdminDashboard: React.FC = () => {
     pdf.setFontSize(11);
     pdf.setTextColor(100, 100, 100);
     pdf.text("Scan the QR code above with your phone camera", pageW / 2, 210, { align: "center" });
-    pdf.text("to register for BKT Crossroads Tyre Assistance", pageW / 2, 217, { align: "center" });
+    pdf.text("to register for BKT You Forward - Journey Assistance Program", pageW / 2, 217, { align: "center" });
 
     pdf.setFillColor(30, 100, 50);
     pdf.rect(0, 270, pageW, 27, "F");
