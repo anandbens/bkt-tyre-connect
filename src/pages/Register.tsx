@@ -117,22 +117,23 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — insert with dummy data
+      // New customer — generate unique dummy data from mobile number
+      const dummy = getDummyCustomer(form.mobile);
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: DUMMY_FORM.name,
+          customer_name: dummy.name,
           customer_code: "",
           dealer_code: dealerCode,
-          city: DUMMY_FORM.city,
-          state: DUMMY_FORM.state,
-          email: DUMMY_FORM.email,
-          vehicle_number: DUMMY_FORM.vehicleNumber,
-          vehicle_make_model: DUMMY_FORM.vehicleMakeModel,
-          tyre_details: DUMMY_FORM.tyreDetails,
-          number_of_tyres: parseInt(DUMMY_FORM.numberOfTyres),
-          invoice_number: DUMMY_FORM.invoiceNumber,
+          city: dummy.city,
+          state: dummy.state,
+          email: dummy.email,
+          vehicle_number: dummy.vehicleNumber,
+          vehicle_make_model: dummy.vehicleMakeModel,
+          tyre_details: dummy.tyreDetails,
+          number_of_tyres: parseInt(dummy.numberOfTyres),
+          invoice_number: dummy.invoiceNumber,
         })
         .select()
         .single();
@@ -144,7 +145,7 @@ const Register: React.FC = () => {
       // Prefill form with dummy data
       setForm((prev) => ({
         ...prev,
-        ...DUMMY_FORM,
+        ...dummy,
       }));
 
       await supabase.from("referrals").insert({
