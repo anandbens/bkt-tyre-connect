@@ -39,6 +39,7 @@ const Register: React.FC = () => {
   const [customerCode, setCustomerCode] = useState("");
   const [alreadyCompleted, setAlreadyCompleted] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<any>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [form, setForm] = useState({
     mobile: "",
     name: "",
