@@ -22,6 +22,7 @@ const AppHeader: React.FC = () => {
           <img src={bktLogo} alt="BKT Logo" className="h-10 w-auto" />
           <div>
             <div className="font-bold text-sm tracking-wide text-primary">BKT You Forward</div>
+            <div className="text-xs text-muted-foreground">Journey Assistance Program</div>
           </div>
         </Link>
 
