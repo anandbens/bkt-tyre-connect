@@ -157,11 +157,6 @@ const Register: React.FC = () => {
       toast({ title: "Missing fields", description: "Name, State and City are mandatory.", variant: "destructive" });
       return;
     }
-    if (isNewUser) {
-      // Already saved during registration
-      setStep(2);
-      return;
-    }
     try {
       const { error } = await supabase
         .from("customers")
