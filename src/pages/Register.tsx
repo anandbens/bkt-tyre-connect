@@ -197,11 +197,6 @@ const Register: React.FC = () => {
 
   // Step 4: Save tyre purchase details & finish
   const saveTyreDetails = async () => {
-    if (isNewUser) {
-      toast({ title: "Registration Complete!", description: "You can now select a subscription plan." });
-      navigate(`/plans?customer=${customerCode}&dealer=${dealerCode}&mobile=${form.mobile}&name=${encodeURIComponent(form.name)}`);
-      return;
-    }
     try {
       const { error } = await supabase
         .from("customers")
