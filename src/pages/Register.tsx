@@ -373,7 +373,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleMakeModel">Make & Model</Label>
-                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
