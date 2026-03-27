@@ -402,7 +402,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
-                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
