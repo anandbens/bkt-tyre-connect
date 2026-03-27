@@ -398,7 +398,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="numberOfTyres">Number of Tyres</Label>
-                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
