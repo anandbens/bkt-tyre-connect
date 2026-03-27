@@ -326,7 +326,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="state">State *</Label>
-                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }} disabled={isNewUser}>
+                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select State" />
                           </SelectTrigger>
