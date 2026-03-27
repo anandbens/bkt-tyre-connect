@@ -117,23 +117,16 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — generate unique dummy data from mobile number
-      const dummy = getDummyCustomer(form.mobile);
+      // New customer — create minimal record
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: dummy.name,
+          customer_name: "",
           customer_code: "",
           dealer_code: dealerCode,
-          city: dummy.city,
-          state: dummy.state,
-          email: dummy.email,
-          vehicle_number: dummy.vehicleNumber,
-          vehicle_make_model: dummy.vehicleMakeModel,
-          tyre_details: dummy.tyreDetails,
-          number_of_tyres: parseInt(dummy.numberOfTyres),
-          invoice_number: dummy.invoiceNumber,
+          city: "",
+          vehicle_number: "",
         })
         .select()
         .single();
@@ -141,12 +134,6 @@ const Register: React.FC = () => {
       if (error) throw error;
       setCustomerCode(data.customer_code);
       setIsNewUser(true);
-
-      // Prefill form with dummy data
-      setForm((prev) => ({
-        ...prev,
-        ...dummy,
-      }));
 
       await supabase.from("referrals").insert({
         customer_code: data.customer_code,
