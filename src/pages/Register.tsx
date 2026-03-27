@@ -11,7 +11,7 @@ import { CheckCircle, Truck, User, ShoppingBag, Phone, ExternalLink, FileText } 
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
-import { getDummyCustomer } from "@/data/dummyCustomers";
+
 
 const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
