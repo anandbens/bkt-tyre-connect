@@ -369,7 +369,7 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleNumber">Vehicle Number *</Label>
-                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleMakeModel">Make & Model</Label>
