@@ -11,7 +11,7 @@ import { CheckCircle, Truck, User, ShoppingBag, Phone, ExternalLink, FileText } 
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, indiaStatesAndCities } from "@/data/indiaStatesAndCities";
-import { getDummyCustomer } from "@/data/dummyCustomers";
+
 
 const steps = ["Verify Phone Number", "Personal Details", "Vehicle Details", "Tyre Purchase"];
 
@@ -117,23 +117,16 @@ const Register: React.FC = () => {
         return;
       }
 
-      // New customer — generate unique dummy data from mobile number
-      const dummy = getDummyCustomer(form.mobile);
+      // New customer — create minimal record
       const { data, error } = await supabase
         .from("customers")
         .insert({
           mobile_number: form.mobile,
-          customer_name: dummy.name,
+          customer_name: "",
           customer_code: "",
           dealer_code: dealerCode,
-          city: dummy.city,
-          state: dummy.state,
-          email: dummy.email,
-          vehicle_number: dummy.vehicleNumber,
-          vehicle_make_model: dummy.vehicleMakeModel,
-          tyre_details: dummy.tyreDetails,
-          number_of_tyres: parseInt(dummy.numberOfTyres),
-          invoice_number: dummy.invoiceNumber,
+          city: "",
+          vehicle_number: "",
         })
         .select()
         .single();
@@ -141,12 +134,6 @@ const Register: React.FC = () => {
       if (error) throw error;
       setCustomerCode(data.customer_code);
       setIsNewUser(true);
-
-      // Prefill form with dummy data
-      setForm((prev) => ({
-        ...prev,
-        ...dummy,
-      }));
 
       await supabase.from("referrals").insert({
         customer_code: data.customer_code,
@@ -168,11 +155,6 @@ const Register: React.FC = () => {
   const savePersonalDetails = async () => {
     if (!form.name || !form.state || !form.city) {
       toast({ title: "Missing fields", description: "Name, State and City are mandatory.", variant: "destructive" });
-      return;
-    }
-    if (isNewUser) {
-      // Already saved during registration
-      setStep(2);
       return;
     }
     try {
@@ -198,10 +180,6 @@ const Register: React.FC = () => {
       toast({ title: "Missing field", description: "Vehicle number is mandatory.", variant: "destructive" });
       return;
     }
-    if (isNewUser) {
-      setStep(3);
-      return;
-    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -219,11 +197,6 @@ const Register: React.FC = () => {
 
   // Step 4: Save tyre purchase details & finish
   const saveTyreDetails = async () => {
-    if (isNewUser) {
-      toast({ title: "Registration Complete!", description: "You can now select a subscription plan." });
-      navigate(`/plans?customer=${customerCode}&dealer=${dealerCode}&mobile=${form.mobile}&name=${encodeURIComponent(form.name)}`);
-      return;
-    }
     try {
       const { error } = await supabase
         .from("customers")
@@ -345,15 +318,15 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="name">Full Name *</Label>
-                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="email">Email (Optional)</Label>
-                        <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="state">State *</Label>
-                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }} disabled={isNewUser}>
+                        <Select value={form.state} onValueChange={(val) => { updateField("state", val); updateField("city", ""); }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select State" />
                           </SelectTrigger>
@@ -366,7 +339,7 @@ const Register: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="city">City *</Label>
-                        <Select value={form.city} onValueChange={(val) => updateField("city", val)} disabled={!form.state || isNewUser}>
+                        <Select value={form.city} onValueChange={(val) => updateField("city", val)} disabled={!form.state}>
                           <SelectTrigger>
                             <SelectValue placeholder={form.state ? "Select City" : "Select state first"} />
                           </SelectTrigger>
@@ -396,11 +369,11 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleNumber">Vehicle Number *</Label>
-                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="vehicleNumber" value={form.vehicleNumber} onChange={(e) => updateField("vehicleNumber", e.target.value)} placeholder="MH12AB1234" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="vehicleMakeModel">Make & Model</Label>
-                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="vehicleMakeModel" value={form.vehicleMakeModel} onChange={(e) => updateField("vehicleMakeModel", e.target.value)} placeholder="e.g. Tata Ace" />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
@@ -421,15 +394,15 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="tyreDetails">Tyre Details</Label>
-                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="tyreDetails" value={form.tyreDetails} onChange={(e) => updateField("tyreDetails", e.target.value)} placeholder="e.g. BKT Agrimax RT657" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="numberOfTyres">Number of Tyres</Label>
-                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="numberOfTyres" type="number" min="1" value={form.numberOfTyres} onChange={(e) => updateField("numberOfTyres", e.target.value)} placeholder="1" />
                       </div>
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
-                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="invoiceNumber" value={form.invoiceNumber} onChange={(e) => updateField("invoiceNumber", e.target.value)} placeholder="INV..." />
                       </div>
                     </div>
                     <div className="flex justify-between pt-2">
