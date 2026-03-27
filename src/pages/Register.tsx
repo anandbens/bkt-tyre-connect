@@ -318,7 +318,7 @@ const Register: React.FC = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="name">Full Name *</Label>
-                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" disabled={isNewUser} className={isNewUser ? "bg-muted" : ""} />
+                        <Input id="name" value={form.name} onChange={(e) => updateField("name", e.target.value)} placeholder="Full Name" />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="email">Email (Optional)</Label>
