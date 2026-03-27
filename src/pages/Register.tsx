@@ -180,10 +180,6 @@ const Register: React.FC = () => {
       toast({ title: "Missing field", description: "Vehicle number is mandatory.", variant: "destructive" });
       return;
     }
-    if (isNewUser) {
-      setStep(3);
-      return;
-    }
     try {
       const { error } = await supabase
         .from("customers")
